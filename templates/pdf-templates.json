@@ -1,0 +1,125 @@
+{
+  "templates": [
+    {
+      "id": "invoice",
+      "description": "Standard client invoice",
+      "configId": "report",
+      "sections": [
+        { "type": "heading",    "content": "{{company_name}}" },
+        { "type": "subheading", "content": "Invoice #{{invoice_no}}" },
+        { "type": "divider" },
+        { "type": "spacer" },
+        { "type": "body",       "content": "Bill To: {{client_name}}" },
+        { "type": "body",       "content": "Address: {{client_address}}" },
+        { "type": "body",       "content": "Date Issued: {{issue_date}}" },
+        { "type": "body",       "content": "Payment Due: {{due_date}}" },
+        { "type": "spacer" },
+        { "type": "subheading", "content": "Services Rendered" },
+        { "type": "divider" },
+        { "type": "body",       "content": "{{line_items}}" },
+        { "type": "spacer" },
+        { "type": "divider" },
+        { "type": "body",       "content": "Total Due: {{total_amount}}" },
+        { "type": "spacer" },
+        { "type": "body",       "content": "{{payment_terms}}" },
+        { "type": "spacer" },
+        { "type": "body",       "content": "{{notes}}" }
+      ]
+    },
+    {
+      "id": "branded-invoice",
+      "description": "Invoice with company logo header band on every page",
+      "configId": "report",
+      "header": {
+        "logoPath":         "{{logo_path}}",
+        "logoAlign":        "right",
+        "logoWidthPercent": 20,
+        "bandColor":        "{{brand_color}}",
+        "bandHeight":       60
+      },
+      "sections": [
+        { "type": "spacer" },
+        { "type": "heading",    "content": "{{company_name}}" },
+        { "type": "subheading", "content": "Invoice #{{invoice_no}}" },
+        { "type": "divider" },
+        { "type": "spacer" },
+        { "type": "body",       "content": "Bill To: {{client_name}}" },
+        { "type": "body",       "content": "Address: {{client_address}}" },
+        { "type": "body",       "content": "Date Issued: {{issue_date}}" },
+        { "type": "body",       "content": "Payment Due: {{due_date}}" },
+        { "type": "spacer" },
+        { "type": "subheading", "content": "Services Rendered" },
+        { "type": "divider" },
+        { "type": "body",       "content": "{{line_items}}" },
+        { "type": "spacer" },
+        { "type": "divider" },
+        { "type": "body",       "content": "Total Due: {{total_amount}}" },
+        { "type": "spacer" },
+        { "type": "body",       "content": "{{payment_terms}}" }
+      ]
+    },
+    {
+      "id": "report",
+      "description": "Professional multi-section report",
+      "configId": "report",
+      "sections": [
+        { "type": "heading",    "content": "{{report_title}}" },
+        { "type": "body",       "content": "Author: {{author}}     Date: {{date}}" },
+        { "type": "spacer" },
+        { "type": "subheading", "content": "Executive Summary" },
+        { "type": "body",       "content": "{{executive_summary}}" },
+        { "type": "spacer" },
+        { "type": "subheading", "content": "Background" },
+        { "type": "body",       "content": "{{background}}" },
+        { "type": "spacer" },
+        { "type": "subheading", "content": "Findings" },
+        { "type": "body",       "content": "{{findings}}" },
+        { "type": "spacer" },
+        { "type": "subheading", "content": "Recommendations" },
+        { "type": "body",       "content": "{{recommendations}}" },
+        { "type": "spacer" },
+        { "type": "divider" },
+        { "type": "body",       "content": "{{footer}}" }
+      ]
+    },
+    {
+      "id": "report-with-chart",
+      "description": "Report with an embedded chart image, centered at 80% width",
+      "configId": "report",
+      "sections": [
+        { "type": "heading",    "content": "{{report_title}}" },
+        { "type": "body",       "content": "Author: {{author}}     Date: {{date}}" },
+        { "type": "spacer" },
+        { "type": "body",       "content": "{{summary}}" },
+        { "type": "spacer" },
+        { "type": "subheading", "content": "Key Metrics" },
+        { "type": "image",      "content": "{{chart_path}}", "align": "center", "widthPercent": "80" },
+        { "type": "spacer" },
+        { "type": "body",       "content": "{{analysis}}" }
+      ]
+    },
+    {
+      "id": "letter",
+      "description": "Formal business letter",
+      "configId": "letter",
+      "sections": [
+        { "type": "body",       "content": "{{sender_name}}" },
+        { "type": "body",       "content": "{{sender_address}}" },
+        { "type": "body",       "content": "{{date}}" },
+        { "type": "spacer" },
+        { "type": "body",       "content": "{{recipient_name}}" },
+        { "type": "body",       "content": "{{recipient_address}}" },
+        { "type": "spacer" },
+        { "type": "heading",    "content": "{{subject}}" },
+        { "type": "spacer" },
+        { "type": "body",       "content": "Dear {{salutation}}," },
+        { "type": "spacer" },
+        { "type": "body",       "content": "{{body}}" },
+        { "type": "spacer" },
+        { "type": "body",       "content": "{{closing}}," },
+        { "type": "spacer" },
+        { "type": "body",       "content": "{{sender_name}}" }
+      ]
+    }
+  ]
+}
