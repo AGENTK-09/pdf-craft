@@ -107,4 +107,20 @@ public class PlaceholderResolver {
             if (!scalars.containsKey(key)) missing.add(key);
         return missing;
     }
+
+    /**
+     * Resolves all {{placeholder}} tokens in every field of the DocumentMetadata.
+     * Returns null if metadata is null.
+     */
+    public DocumentMetadata resolveMetadata(DocumentMetadata metadata) {
+        if (metadata == null) return null;
+        return new DocumentMetadata.Builder()
+            .title(resolve(metadata.getTitle()))
+            .author(resolve(metadata.getAuthor()))
+            .subject(resolve(metadata.getSubject()))
+            .keywords(resolve(metadata.getKeywords()))
+            .creator(resolve(metadata.getCreator()))
+            .producer(resolve(metadata.getProducer()))
+            .build();
+    }
 }
