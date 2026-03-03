@@ -16,6 +16,7 @@ public class PdfTemplate {
     private final String               configId;
     private final PageHeader           header;
     private final PageFooter           footer;
+    private final DocumentMetadata     metadata;
     private final List<TemplateSection> sections;
 
     private PdfTemplate(Builder b) {
@@ -24,6 +25,7 @@ public class PdfTemplate {
         this.configId    = b.configId;
         this.header      = b.header;
         this.footer      = b.footer;
+        this.metadata    = b.metadata;
         this.sections    = Collections.unmodifiableList(b.sections);
     }
 
@@ -32,16 +34,19 @@ public class PdfTemplate {
     public String               getConfigId()    { return configId; }
     public PageHeader           getHeader()      { return header; }
     public PageFooter           getFooter()      { return footer; }
+    public DocumentMetadata     getMetadata()    { return metadata; }
     public List<TemplateSection> getSections()   { return sections; }
     public boolean              hasHeader()      { return header != null; }
     public boolean              hasFooter()      { return footer != null; }
+    public boolean              hasMetadata()    { return metadata != null && metadata.hasAnyField(); }
 
     @Override
     public String toString() {
-        return String.format("PdfTemplate[id=%s, configId=%s, sections=%d, header=%s, footer=%s]",
+        return String.format("PdfTemplate[id=%s, configId=%s, sections=%d, header=%s, footer=%s, metadata=%s]",
             id, configId, sections.size(),
-            header != null ? "yes" : "none",
-            footer != null ? "yes" : "none");
+            header   != null ? "yes" : "none",
+            footer   != null ? "yes" : "none",
+            metadata != null ? "yes" : "none");
     }
 
     public static class Builder {
@@ -50,6 +55,7 @@ public class PdfTemplate {
         private String               configId    = "default";
         private PageHeader           header      = null;
         private PageFooter           footer      = null;
+        private DocumentMetadata     metadata    = null;
         private List<TemplateSection> sections   = List.of();
 
         public Builder id(String v)                            { this.id = v; return this; }
@@ -57,6 +63,7 @@ public class PdfTemplate {
         public Builder configId(String v)                      { this.configId = v; return this; }
         public Builder header(PageHeader v)                    { this.header = v; return this; }
         public Builder footer(PageFooter v)                    { this.footer = v; return this; }
+        public Builder metadata(DocumentMetadata v)            { this.metadata = v; return this; }
         public Builder sections(List<TemplateSection> sections){ this.sections = sections; return this; }
 
         public PdfTemplate build() {
