@@ -8,6 +8,7 @@ import com.pdfcreator.generator.PageContext;
 import com.pdfcreator.pipeline.RenderPipeline;
 import com.pdfcreator.renderer.SectionRendererRegistry;
 import com.pdfcreator.service.ConfigService;
+import com.pdfcreator.template.DocumentMetadata;
 import com.pdfcreator.template.TemplateSection;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -85,6 +86,9 @@ public class PdfCreator {
             String configId   = getArg(args, "--config-id", DEFAULT_CONFIG_ID);
             String title      = getArg(args, "--title",     null);
             String author     = getArg(args, "--author",    null);
+            String subject    = getArg(args, "--subject",   null);
+            String keywords   = getArg(args, "--keywords",  null);
+            String creator    = getArg(args, "--creator",   null);
             String inlineText = getArg(args, "--text",      null);
             String textFile   = getArg(args, "--text-file", null);
             List<String> imagePaths = resolveImagePaths(args);
@@ -95,7 +99,7 @@ public class PdfCreator {
             PdfConfig config = new ConfigService(configFile).getConfig(configId);
             System.out.println("Mode   : direct | Config: " + config.getId() + " | Output: " + outputPath);
 
-            renderDirect(config, title, author, bodyText, imagePaths, outputPath);
+            renderDirect(config, title, author, subject, keywords, creator, bodyText, imagePaths, outputPath);
         }
 
         System.out.println("Done.");
@@ -104,6 +108,7 @@ public class PdfCreator {
     // -----------------------------------------------------------------------
 
     private static void renderDirect(PdfConfig config, String title, String author,
+                                      String subject, String keywords, String creator,
                                       String bodyText, List<String> imagePaths,
                                       String outputPath) throws Exception {
         List<TemplateSection> sections = new ArrayList<>();
@@ -123,6 +128,19 @@ public class PdfCreator {
         SectionRendererRegistry registry = new SectionRendererRegistry();
 
         try (PDDocument document = new PDDocument()) {
+            // Apply document metadata to PDDocumentInformation
+            org.apache.pdfbox.pdmodel.PDDocumentInformation info =
+                document.getDocumentInformation();
+            if (title    != null && !title.isBlank())    info.setTitle(title);
+            if (author   != null && !author.isBlank())   info.setAuthor(author);
+            if (subject  != null && !subject.isBlank())  info.setSubject(subject);
+            if (keywords != null && !keywords.isBlank()) info.setKeywords(keywords);
+            info.setCreator(creator != null && !creator.isBlank() ? creator : "PdfCreator");
+            info.setProducer("PdfCreator / Apache PDFBox 3");
+            java.util.Calendar now = java.util.Calendar.getInstance();
+            info.setCreationDate(now);
+            info.setModificationDate(now);
+
             PageContext ctx = new PageContext(document, config, pageSize);
             ctx.open();
             for (TemplateSection s : sections)
@@ -154,7 +172,12 @@ public class PdfCreator {
 
             DIRECT MODE:
               --config-id <id>         Config preset (default: default)
-              --title / --text / --text-file / --image / --images
+              --title <text>           Document title (written to page and metadata)
+              --author <text>          Author name (metadata only)
+              --subject <text>         Document subject (metadata only)
+              --keywords <text>        Space-separated keywords (metadata only)
+              --creator <text>         Creating application name (metadata only)
+              --text / --text-file / --image / --images
               --output <file>
 
             SHARED OPTIONS:

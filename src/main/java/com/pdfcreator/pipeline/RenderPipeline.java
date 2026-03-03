@@ -9,6 +9,7 @@ import com.pdfcreator.renderer.SectionRenderer;
 import com.pdfcreator.renderer.SectionRendererRegistry;
 import com.pdfcreator.service.ConfigService;
 import com.pdfcreator.template.*;
+import com.pdfcreator.template.DocumentMetadata;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -67,9 +68,10 @@ public class RenderPipeline {
         if (!missing.isEmpty())
             System.err.println("Warning: Unresolved placeholders: " + missing);
 
-        List<TemplateSection> sections = resolver.resolveSections(template.getSections());
-        PageHeader header = resolver.resolveHeader(template.getHeader());
-        PageFooter footer = resolver.resolveFooter(template.getFooter());
+        List<TemplateSection> sections  = resolver.resolveSections(template.getSections());
+        PageHeader            header    = resolver.resolveHeader(template.getHeader());
+        PageFooter            footer    = resolver.resolveFooter(template.getFooter());
+        DocumentMetadata      metadata  = resolver.resolveMetadata(template.getMetadata());
 
         // 4. Load config
         PdfConfig config = configService.getConfig(template.getConfigId());
@@ -86,7 +88,10 @@ public class RenderPipeline {
         PDRectangle pageSize = resolvePageSize(config.getPageSize());
 
         try (PDDocument document = new PDDocument()) {
-            document.getDocumentInformation().setTitle(template.getDescription());
+            // Apply document metadata (title, author, subject, keywords, creator,
+            // producer, creation date). All fields support {{placeholder}} substitution
+            // resolved above. Falls back to template description when no metadata block.
+            applyMetadata(document, metadata, template.getDescription());
 
             // Reserve bottom space for footer band before PageContext is created
             PdfConfig renderConfig = footer != null && footer.hasBand()
@@ -194,6 +199,57 @@ public class RenderPipeline {
             }
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Metadata application
+    // -----------------------------------------------------------------------
+
+    /**
+     * Writes all non-blank DocumentMetadata fields to PDDocumentInformation.
+     *
+     * If metadata is null or has no fields, falls back to setting the title
+     * from the template description so the PDF is never completely anonymous.
+     *
+     * PDDocumentInformation.setProducer() is intentionally always set so
+     * the generating tool is traceable in PDF viewers and audit tools.
+     */
+    private void applyMetadata(PDDocument document, DocumentMetadata metadata,
+                                String fallbackTitle) {
+
+        org.apache.pdfbox.pdmodel.PDDocumentInformation info =
+            document.getDocumentInformation();
+
+        if (metadata == null || !metadata.hasAnyField()) {
+            // Minimal fallback — title only
+            info.setTitle(fallbackTitle);
+            info.setProducer("PdfCreator / Apache PDFBox 3");
+            return;
+        }
+
+        // Title — prefer explicit metadata value, fall back to template description
+        String title = hasValue(metadata.getTitle()) ? metadata.getTitle() : fallbackTitle;
+        info.setTitle(title);
+
+        if (hasValue(metadata.getAuthor()))   info.setAuthor(metadata.getAuthor());
+        if (hasValue(metadata.getSubject()))  info.setSubject(metadata.getSubject());
+        if (hasValue(metadata.getKeywords())) info.setKeywords(metadata.getKeywords());
+        if (hasValue(metadata.getCreator()))  info.setCreator(metadata.getCreator());
+
+        // Producer — always written; defaults to "PdfCreator / Apache PDFBox 3"
+        String producer = hasValue(metadata.getProducer())
+            ? metadata.getProducer()
+            : "PdfCreator / Apache PDFBox 3";
+        info.setProducer(producer);
+
+        // Creation date — set to current time so PDF viewers show when the doc was generated
+        java.util.Calendar now = java.util.Calendar.getInstance();
+        info.setCreationDate(now);
+        info.setModificationDate(now);
+
+        logger.info("Document metadata applied: " + metadata);
+    }
+
+    private static boolean hasValue(String s) { return s != null && !s.isBlank(); }
 
     private PDRectangle resolvePageSize(String pageSize) {
         return switch (pageSize.toUpperCase()) {
