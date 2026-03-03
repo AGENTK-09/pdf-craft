@@ -45,7 +45,7 @@ public class TemplateService {
 
         return cache.get(id).orElseThrow(() ->
             new IllegalArgumentException(
-                "No template found with id: '" + id + "'. "
+                "No template found with id: '" + id + "'. "                
             )
         );
     }

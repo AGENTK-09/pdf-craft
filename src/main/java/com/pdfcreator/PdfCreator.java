@@ -1,27 +1,31 @@
 package com.pdfcreator;
 
+import com.pdfcreator.batch.*;
 import com.pdfcreator.config.PdfConfig;
-import com.pdfcreator.generator.PdfGenerator;
+import com.pdfcreator.datasource.DocumentData;
+import com.pdfcreator.datasource.JsonFileDataSource;
+import com.pdfcreator.generator.PageContext;
+import com.pdfcreator.pipeline.RenderPipeline;
+import com.pdfcreator.renderer.SectionRendererRegistry;
 import com.pdfcreator.service.ConfigService;
-import com.pdfcreator.template.TemplateRenderer;
+import com.pdfcreator.template.TemplateSection;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Entry point — thin CLI layer.
+ * Entry point. Three operating modes:
  *
- * Two operating modes:
+ *   TEMPLATE MODE  --template-id + --data-file
+ *     Full pipeline: template + structured JSON data → one PDF.
  *
- *   TEMPLATE MODE  (--template-id + --data-file)
- *     Loads a named template, fills {{placeholders}} from a JSON data file,
- *     and generates the PDF. Config preset is determined by the template.
+ *   BATCH MODE     --batch + --template-id + (--data-dir | --csv-file)
+ *     Parallel batch: one template + N data sources → N PDFs.
  *
- *   DIRECT MODE    (--title / --text / --text-file, as before)
- *     Generates a PDF from raw CLI arguments. Config preset set via --config-id.
- *
- * If --template-id is present, template mode is used. Otherwise direct mode.
+ *   DIRECT MODE    --title / --text / --text-file
+ *     Quick generation without a template file.
  */
 public class PdfCreator {
 
@@ -31,26 +35,50 @@ public class PdfCreator {
     private static final String DEFAULT_TEMPLATE_FILE = "templates/pdf-templates.json";
 
     public static void main(String[] args) throws Exception {
-        if (args.length == 0 || hasFlag(args, "--help")) {
-            printHelp();
-            return;
-        }
+        if (args.length == 0 || hasFlag(args, "--help")) { printHelp(); return; }
 
-        String outputPath    = getArg(args, "--output",        DEFAULT_OUTPUT);
-        String configFile    = getArg(args, "--config-file",   DEFAULT_CONFIG_FILE);
-        String templateFile  = getArg(args, "--template-file", DEFAULT_TEMPLATE_FILE);
-        String templateId    = getArg(args, "--template-id",   null);
+        String outputPath   = getArg(args, "--output",        DEFAULT_OUTPUT);
+        String configFile   = getArg(args, "--config-file",   DEFAULT_CONFIG_FILE);
+        String templateFile = getArg(args, "--template-file", DEFAULT_TEMPLATE_FILE);
+        String templateId   = getArg(args, "--template-id",   null);
 
-        if (templateId != null) {
+        if (hasFlag(args, "--batch")) {
+            // ---- BATCH MODE ----
+            if (templateId == null) {
+                System.err.println("Error: --template-id is required for batch mode.");
+                System.exit(1);
+            }
+            String dataDir    = getArg(args, "--data-dir",  null);
+            String csvFile    = getArg(args, "--csv-file",  null);
+            String outputDir  = getArg(args, "--output-dir","output/");
+            int    threads    = Integer.parseInt(getArg(args, "--threads", "4"));
+
+            RenderPipeline pipeline = new RenderPipeline(templateFile, configFile);
+            List<BatchJob> jobs;
+
+            if (dataDir != null) {
+                jobs = new DirectoryBatchJobFactory(templateId, dataDir, outputDir).createJobs();
+            } else if (csvFile != null) {
+                String refCol = getArg(args, "--ref-col", "ref_id");
+                String outCol = getArg(args, "--out-col", "output_file");
+                jobs = new CsvBatchJobFactory(templateId, csvFile, outputDir, refCol, outCol).createJobs();
+            } else {
+                System.err.println("Error: --batch requires --data-dir or --csv-file.");
+                System.exit(1);
+                return;
+            }
+
+            new BatchRunner(pipeline, threads).run(jobs);
+
+        } else if (templateId != null) {
             // ---- TEMPLATE MODE ----
             String dataFile = getArg(args, "--data-file", null);
             if (dataFile == null) {
-                System.err.println("Error: --data-file is required when using --template-id.");
-                System.err.println("Usage: --template-id <id> --data-file <path> --output <file>");
+                System.err.println("Error: --data-file is required with --template-id.");
                 System.exit(1);
             }
-            new TemplateRenderer(templateFile, configFile)
-                .render(templateId, dataFile, outputPath);
+            new RenderPipeline(templateFile, configFile)
+                .render(templateId, new JsonFileDataSource(dataFile), outputPath);
 
         } else {
             // ---- DIRECT MODE ----
@@ -64,93 +92,108 @@ public class PdfCreator {
             TextInputResolver textResolver = new TextInputResolver(inlineText, textFile);
             String bodyText = textResolver.resolve();
 
-            ConfigService configService = new ConfigService(configFile);
-            PdfConfig config;
-            try {
-                config = configService.getConfig(configId);
-            } catch (IllegalArgumentException e) {
-                System.err.println("Error: " + e.getMessage());
-                System.err.println("Available configs: " + configService.listAvailableIds());
-                System.exit(1);
-                return;
-            }
+            PdfConfig config = new ConfigService(configFile).getConfig(configId);
+            System.out.println("Mode   : direct | Config: " + config.getId() + " | Output: " + outputPath);
 
-            System.out.println("Mode          : direct");
-            System.out.println("Using config  : " + config.getId());
-            System.out.println("Output file   : " + outputPath);
-            System.out.println("Text source   : " + textResolver.describeSource());
-            if (!imagePaths.isEmpty()) System.out.println("Images        : " + imagePaths);
-
-            new PdfGenerator().generate(config, title, author, bodyText, imagePaths, outputPath);
+            renderDirect(config, title, author, bodyText, imagePaths, outputPath);
         }
 
-        System.out.println("Done: " + outputPath);
+        System.out.println("Done.");
     }
 
     // -----------------------------------------------------------------------
 
+    private static void renderDirect(PdfConfig config, String title, String author,
+                                      String bodyText, List<String> imagePaths,
+                                      String outputPath) throws Exception {
+        List<TemplateSection> sections = new ArrayList<>();
+        if (title    != null) sections.add(new TemplateSection.Builder(TemplateSection.Type.HEADING).content(title).build());
+        if (author   != null) sections.add(new TemplateSection.Builder(TemplateSection.Type.BODY).content("Author: " + author).build());
+        if (bodyText != null) sections.add(new TemplateSection.Builder(TemplateSection.Type.BODY).content(bodyText).build());
+        for (String p : imagePaths)
+            sections.add(new TemplateSection.Builder(TemplateSection.Type.IMAGE).content(p).build());
+
+        if (sections.isEmpty()) { System.out.println("Nothing to render."); return; }
+
+        PDRectangle pageSize = switch (config.getPageSize().toUpperCase()) {
+            case "LETTER" -> PDRectangle.LETTER; case "A3" -> PDRectangle.A3; default -> PDRectangle.A4;
+        };
+
+        DocumentData emptyData = new DocumentData.Builder().build();
+        SectionRendererRegistry registry = new SectionRendererRegistry();
+
+        try (PDDocument document = new PDDocument()) {
+            PageContext ctx = new PageContext(document, config, pageSize);
+            ctx.open();
+            for (TemplateSection s : sections)
+                registry.get(s.getType()).render(s, ctx, config, emptyData, document);
+            ctx.close();
+            document.save(outputPath);
+            System.out.println("Pages: " + ctx.getPageNumber());
+        }
+    }
+
+    private static void printHelp() {
+        System.out.println("""
+            PdfCreator — Scalable template-based PDF generation
+
+            TEMPLATE MODE:
+              --template-id <id>       Template to use
+              --data-file <path>       JSON data file (scalars + lists for tables)
+              --output <file>          Output PDF (default: output.pdf)
+
+            BATCH MODE:
+              --batch
+              --template-id <id>       Template to use for all jobs
+              --data-dir <path>        Directory of .json data files (one PDF per file)
+              --csv-file <path>        CSV of scalar data (one row = one PDF)
+              --output-dir <path>      Directory for output PDFs (default: output/)
+              --threads <n>            Parallel threads (default: 4)
+              --ref-col <col>          CSV column to use as reference ID (default: ref_id)
+              --out-col <col>          CSV column for output filename (default: output_file)
+
+            DIRECT MODE:
+              --config-id <id>         Config preset (default: default)
+              --title / --text / --text-file / --image / --images
+              --output <file>
+
+            SHARED OPTIONS:
+              --template-file <path>   Template definitions (default: templates/pdf-templates.json)
+              --config-file <path>     Config presets (default: configs/pdf-configs.json)
+
+            EXAMPLES:
+              # Single bank statement
+              java -jar pdf-creator.jar \\
+                --template-id bank-statement \\
+                --data-file data/customer-12345.json \\
+                --output statements/12345-feb26.pdf
+
+              # Batch: entire customer directory, 8 threads
+              java -jar pdf-creator.jar --batch \\
+                --template-id bank-statement \\
+                --data-dir data/statements/feb26/ \\
+                --output-dir output/statements/feb26/ \\
+                --threads 8
+
+              # Batch: from CSV (simple notifications)
+              java -jar pdf-creator.jar --batch \\
+                --template-id notification-letter \\
+                --csv-file data/notifications.csv \\
+                --output-dir output/letters/
+            """);
+    }
+
     private static List<String> resolveImagePaths(String[] args) {
         String multi = getArg(args, "--images", null);
-        if (multi != null) {
-            return Arrays.stream(multi.split(","))
-                         .map(String::trim)
-                         .filter(s -> !s.isBlank())
-                         .collect(Collectors.toList());
-        }
+        if (multi != null) return Arrays.stream(multi.split(",")).map(String::trim).filter(s -> !s.isBlank()).collect(Collectors.toList());
         String single = getArg(args, "--image", null);
         if (single != null) return List.of(single.trim());
         return List.of();
     }
 
-    private static void printHelp() {
-        System.out.println("""
-            PdfCreator - Config-driven, template-based PDF generation using Apache PDFBox
-
-            Usage:
-              java -jar pdf-creator.jar [options]
-
-            TEMPLATE MODE  (provide --template-id and --data-file):
-              --template-id <id>       Template to use (from pdf-templates.json)
-              --data-file <path>       JSON file with placeholder values
-              --template-file <path>   Template definitions file (default: templates/pdf-templates.json)
-              --output <file>          Output PDF path (default: output.pdf)
-
-            DIRECT MODE  (no --template-id):
-              --config-id <id>         Config preset (default: "default")
-              --config-file <path>     Config file path (default: configs/pdf-configs.json)
-              --title <text>           Document title
-              --author <text>          Document author
-              --text <text>            Inline body text
-              --text-file <path>       Plain text file to use as body
-              --image <path>           Single image to embed
-              --images <p1,p2,...>     Multiple images (comma-separated)
-              --output <file>          Output PDF path (default: output.pdf)
-
-            Examples:
-              # Template mode — invoice
-              java -jar pdf-creator.jar \\
-                --template-id invoice \\
-                --data-file data/invoice-acme.json \\
-                --output invoices/acme-0042.pdf
-
-              # Template mode — report
-              java -jar pdf-creator.jar \\
-                --template-id report \\
-                --data-file data/q4-report-data.json \\
-                --output q4-report.pdf
-
-              # Direct mode (as before)
-              java -jar pdf-creator.jar \\
-                --config-id report --title "Q4 Analysis" \\
-                --text-file ./q4.txt --output q4.pdf
-            """);
-    }
-
-    private static String getArg(String[] args, String flag, String defaultValue) {
-        for (int i = 0; i < args.length - 1; i++) {
-            if (args[i].equals(flag)) return args[i + 1];
-        }
-        return defaultValue;
+    private static String getArg(String[] args, String flag, String def) {
+        for (int i = 0; i < args.length - 1; i++) if (args[i].equals(flag)) return args[i + 1];
+        return def;
     }
 
     private static boolean hasFlag(String[] args, String flag) {
@@ -158,5 +201,3 @@ public class PdfCreator {
         return false;
     }
 }
-
-

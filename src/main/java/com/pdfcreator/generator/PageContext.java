@@ -16,23 +16,6 @@ import java.util.logging.Logger;
 /**
  * Tracks the rendering cursor and manages page creation for multi-page documents.
  *
- * Responsibilities:
- *   - Holds the current Y position (cursor) as content is written
- *   - Detects when the cursor drops below the bottom margin
- *   - Opens a new page and resets the cursor automatically
- *   - Applies the background color to each new page
- *
- * Usage:
- *   PageContext ctx = new PageContext(document, config);
- *   ctx.open();
- *   // ... write content using ctx.getContentStream() and ctx.getYPos() ...
- *   ctx.advanceY(lineHeight);   // moves cursor down; triggers new page if needed
- *   ctx.close();
- */
-
-/**
- * Tracks the rendering cursor and manages page creation for multi-page documents.
- *
  * New vs previous version:
  *   - Accepts an optional PageHeader drawn automatically on each new page.
  *   - Header band is drawn before background fill so the band color shows.

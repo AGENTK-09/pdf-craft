@@ -18,19 +18,6 @@ import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Generates PDF documents from a PdfConfig preset and provided content.
- *
- * Features:
- *   - Multi-page support: text automatically flows onto new pages
- *   - Image embedding: images are scaled to fit within page margins
- *   - Font colors: configurable per-preset via hex strings
- *   - Background colors: configurable per-preset, applied to every page
- *   - Title underline with title color
- *
- * Entry point: generate(config, title, author, bodyText, imagePaths, outputPath)
- */
-
-/**
  * Generates PDF documents from either:
  *   A) A list of resolved TemplateSection objects  (template mode)
  *   B) Raw title / author / bodyText strings       (legacy direct mode)

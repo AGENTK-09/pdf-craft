@@ -1,124 +1,178 @@
 {
   "templates": [
     {
-      "id": "invoice",
-      "description": "Standard client invoice",
-      "configId": "report",
-      "sections": [
-        { "type": "heading",    "content": "{{company_name}}" },
-        { "type": "subheading", "content": "Invoice #{{invoice_no}}" },
-        { "type": "divider" },
-        { "type": "spacer" },
-        { "type": "body",       "content": "Bill To: {{client_name}}" },
-        { "type": "body",       "content": "Address: {{client_address}}" },
-        { "type": "body",       "content": "Date Issued: {{issue_date}}" },
-        { "type": "body",       "content": "Payment Due: {{due_date}}" },
-        { "type": "spacer" },
-        { "type": "subheading", "content": "Services Rendered" },
-        { "type": "divider" },
-        { "type": "body",       "content": "{{line_items}}" },
-        { "type": "spacer" },
-        { "type": "divider" },
-        { "type": "body",       "content": "Total Due: {{total_amount}}" },
-        { "type": "spacer" },
-        { "type": "body",       "content": "{{payment_terms}}" },
-        { "type": "spacer" },
-        { "type": "body",       "content": "{{notes}}" }
-      ]
-    },
-    {
-      "id": "branded-invoice",
-      "description": "Invoice with company logo header band on every page",
+      "id": "bank-statement",
+      "description": "Monthly bank account statement",
       "configId": "report",
       "header": {
-        "logoPath":         "{{logo_path}}",
+        "logoPath":         "assets/bank-logo.png",
         "logoAlign":        "right",
-        "logoWidthPercent": 20,
-        "bandColor":        "{{brand_color}}",
-        "bandHeight":       60
+        "logoWidthPercent": 18,
+        "bandColor":        "#003366",
+        "bandHeight":       55
+      },
+      "footer": {
+        "leftText":          "{{bank_name}} | Registered in England No. {{reg_no}}",
+        "centerText":        null,
+        "showPageNumbers":   true,
+        "pageNumberFormat":  "Page {n} of {total}",
+        "bandColor":         "#003366",
+        "bandHeight":        26
       },
       "sections": [
         { "type": "spacer" },
-        { "type": "heading",    "content": "{{company_name}}" },
-        { "type": "subheading", "content": "Invoice #{{invoice_no}}" },
+        {
+          "type": "columns",
+          "leftWidth": 55,
+          "left": [
+            { "type": "subheading", "content": "{{customer_name}}" },
+            { "type": "body",       "content": "{{customer_address_line1}}" },
+            { "type": "body",       "content": "{{customer_address_line2}}" },
+            { "type": "body",       "content": "{{customer_postcode}}" }
+          ],
+          "right": [
+            { "type": "body", "content": "Account Number: {{account_no}}" },
+            { "type": "body", "content": "Sort Code:      {{sort_code}}" },
+            { "type": "body", "content": "Statement Date: {{statement_date}}" },
+            { "type": "body", "content": "Period:         {{period_from}} – {{period_to}}" }
+          ]
+        },
         { "type": "divider" },
         { "type": "spacer" },
-        { "type": "body",       "content": "Bill To: {{client_name}}" },
-        { "type": "body",       "content": "Address: {{client_address}}" },
-        { "type": "body",       "content": "Date Issued: {{issue_date}}" },
-        { "type": "body",       "content": "Payment Due: {{due_date}}" },
+        {
+          "type": "summary",
+          "content": "Opening Balance: {{opening_balance}}\nTotal Credits: {{total_credits}}\nTotal Debits: {{total_debits}}\nClosing Balance: {{closing_balance}}"
+        },
         { "type": "spacer" },
-        { "type": "subheading", "content": "Services Rendered" },
-        { "type": "divider" },
-        { "type": "body",       "content": "{{line_items}}" },
+        { "type": "subheading", "content": "Transaction History" },
+        {
+          "type":               "table",
+          "dataKey":            "transactions",
+          "headerBgColor":      "#003366",
+          "alternateRowColor":  "#F0F4F8",
+          "repeatHeaderOnPage": true,
+          "columns": [
+            { "key": "date",        "header": "Date",        "widthPct": 12, "align": "left"  },
+            { "key": "type",        "header": "Type",        "widthPct": 12, "align": "left"  },
+            { "key": "description", "header": "Description", "widthPct": 44, "align": "left"  },
+            { "key": "debit",       "header": "Debit (£)",   "widthPct": 16, "align": "right" },
+            { "key": "credit",      "header": "Credit (£)",  "widthPct": 16, "align": "right" }
+          ]
+        },
         { "type": "spacer" },
-        { "type": "divider" },
-        { "type": "body",       "content": "Total Due: {{total_amount}}" },
-        { "type": "spacer" },
-        { "type": "body",       "content": "{{payment_terms}}" }
+        { "type": "pagebreak" },
+        { "type": "subheading", "content": "Important Information" },
+        {
+          "type":    "notice",
+          "bgColor": "#FFF3CD",
+          "content": "This statement is provided for information purposes only. Please check all entries carefully. If you believe there is an error, contact us within 60 days. {{bank_name}} is authorised by the Prudential Regulation Authority and regulated by the Financial Conduct Authority and the Prudential Regulation Authority. FCA Registration: {{fca_no}}."
+        }
       ]
     },
     {
-      "id": "report",
-      "description": "Professional multi-section report",
+      "id": "credit-card-statement",
+      "description": "Monthly credit card statement",
       "configId": "report",
+      "header": {
+        "logoPath":         "assets/bank-logo.png",
+        "logoAlign":        "right",
+        "logoWidthPercent": 18,
+        "bandColor":        "#8B0000",
+        "bandHeight":       55
+      },
+      "footer": {
+        "leftText":         "{{bank_name}} Credit Services | FCA Reg: {{fca_no}}",
+        "showPageNumbers":  true,
+        "bandColor":        "#8B0000",
+        "bandHeight":       26
+      },
       "sections": [
-        { "type": "heading",    "content": "{{report_title}}" },
-        { "type": "body",       "content": "Author: {{author}}     Date: {{date}}" },
         { "type": "spacer" },
-        { "type": "subheading", "content": "Executive Summary" },
-        { "type": "body",       "content": "{{executive_summary}}" },
-        { "type": "spacer" },
-        { "type": "subheading", "content": "Background" },
-        { "type": "body",       "content": "{{background}}" },
-        { "type": "spacer" },
-        { "type": "subheading", "content": "Findings" },
-        { "type": "body",       "content": "{{findings}}" },
-        { "type": "spacer" },
-        { "type": "subheading", "content": "Recommendations" },
-        { "type": "body",       "content": "{{recommendations}}" },
-        { "type": "spacer" },
+        { "type": "heading", "content": "Credit Card Statement" },
+        {
+          "type": "columns",
+          "leftWidth": 55,
+          "left": [
+            { "type": "body", "content": "{{customer_name}}" },
+            { "type": "body", "content": "{{customer_address_line1}}, {{customer_postcode}}" }
+          ],
+          "right": [
+            { "type": "body", "content": "Card ending: {{card_last4}}" },
+            { "type": "body", "content": "Statement date: {{statement_date}}" },
+            { "type": "body", "content": "Payment due: {{payment_due_date}}" }
+          ]
+        },
         { "type": "divider" },
-        { "type": "body",       "content": "{{footer}}" }
+        { "type": "spacer" },
+        {
+          "type": "summary",
+          "content": "Previous Balance: {{previous_balance}}\nPayments Received: {{payments_received}}\nNew Charges: {{new_charges}}\nInterest Charged: {{interest_charged}}\nMinimum Payment Due: {{minimum_payment}}"
+        },
+        { "type": "spacer" },
+        { "type": "subheading", "content": "Transactions" },
+        {
+          "type":               "table",
+          "dataKey":            "transactions",
+          "headerBgColor":      "#8B0000",
+          "alternateRowColor":  "#FFF5F5",
+          "repeatHeaderOnPage": true,
+          "columns": [
+            { "key": "date",        "header": "Date",        "widthPct": 12, "align": "left"  },
+            { "key": "merchant",    "header": "Merchant",    "widthPct": 48, "align": "left"  },
+            { "key": "category",    "header": "Category",    "widthPct": 20, "align": "left"  },
+            { "key": "amount",      "header": "Amount (£)",  "widthPct": 20, "align": "right" }
+          ]
+        },
+        { "type": "spacer" },
+        { "type": "pagebreak" },
+        {
+          "type":    "notice",
+          "bgColor": "#FFE4E1",
+          "content": "IMPORTANT: The minimum payment is due by {{payment_due_date}}. Late payment may incur a fee of £12 and affect your credit rating. To avoid interest charges, pay the full balance. APR: {{apr}}. This credit agreement is regulated by the Consumer Credit Act 1974."
+        }
       ]
     },
     {
-      "id": "report-with-chart",
-      "description": "Report with an embedded chart image, centered at 80% width",
-      "configId": "report",
-      "sections": [
-        { "type": "heading",    "content": "{{report_title}}" },
-        { "type": "body",       "content": "Author: {{author}}     Date: {{date}}" },
-        { "type": "spacer" },
-        { "type": "body",       "content": "{{summary}}" },
-        { "type": "spacer" },
-        { "type": "subheading", "content": "Key Metrics" },
-        { "type": "image",      "content": "{{chart_path}}", "align": "center", "widthPercent": "80" },
-        { "type": "spacer" },
-        { "type": "body",       "content": "{{analysis}}" }
-      ]
-    },
-    {
-      "id": "letter",
-      "description": "Formal business letter",
+      "id": "notification-letter",
+      "description": "Customer notification letter",
       "configId": "letter",
+      "header": {
+        "logoPath":         "assets/bank-logo.png",
+        "logoAlign":        "left",
+        "logoWidthPercent": 20,
+        "bandColor":        "#003366",
+        "bandHeight":       50
+      },
+      "footer": {
+        "centerText":       "{{bank_name}} | {{bank_address}} | {{bank_phone}}",
+        "showPageNumbers":  false,
+        "bandColor":        "#F0F0F0",
+        "bandHeight":       24
+      },
       "sections": [
-        { "type": "body",       "content": "{{sender_name}}" },
-        { "type": "body",       "content": "{{sender_address}}" },
-        { "type": "body",       "content": "{{date}}" },
         { "type": "spacer" },
-        { "type": "body",       "content": "{{recipient_name}}" },
-        { "type": "body",       "content": "{{recipient_address}}" },
+        { "type": "body", "content": "{{customer_name}}" },
+        { "type": "body", "content": "{{customer_address_line1}}" },
+        { "type": "body", "content": "{{customer_address_line2}}" },
+        { "type": "body", "content": "{{customer_postcode}}" },
         { "type": "spacer" },
-        { "type": "heading",    "content": "{{subject}}" },
+        { "type": "body", "content": "{{statement_date}}" },
         { "type": "spacer" },
-        { "type": "body",       "content": "Dear {{salutation}}," },
+        { "type": "heading", "content": "{{subject}}" },
         { "type": "spacer" },
-        { "type": "body",       "content": "{{body}}" },
+        { "type": "body", "content": "Dear {{salutation}}," },
         { "type": "spacer" },
-        { "type": "body",       "content": "{{closing}}," },
+        { "type": "body", "content": "{{body_paragraph_1}}" },
         { "type": "spacer" },
-        { "type": "body",       "content": "{{sender_name}}" }
+        { "type": "body", "content": "{{body_paragraph_2}}" },
+        { "type": "spacer" },
+        { "type": "notice", "bgColor": "#E8F4FD", "content": "{{action_required}}" },
+        { "type": "spacer" },
+        { "type": "body", "content": "Yours sincerely," },
+        { "type": "spacer" },
+        { "type": "body", "content": "{{signatory}}" },
+        { "type": "body", "content": "{{signatory_title}}" },
+        { "type": "body", "content": "{{bank_name}}" }
       ]
     }
   ]

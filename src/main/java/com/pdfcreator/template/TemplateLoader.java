@@ -9,19 +9,16 @@ import java.util.regex.*;
 /**
  * Loads PdfTemplate definitions from a JSON file.
  *
- * New vs previous version:
- *   - Parses optional "header" object into a PageHeader
- *   - Parses optional "align" and "widthPercent" fields on image sections
+ * Added vs previous version:
+ *   - Parses optional "footer" object into a PageFooter
+ *   - Parses COLUMNS sections (nested left/right section arrays)
  */
 public class TemplateLoader {
 
     private static final Logger logger = Logger.getLogger(TemplateLoader.class.getName());
-
     private final String templateFilePath;
 
-    public TemplateLoader(String templateFilePath) {
-        this.templateFilePath = templateFilePath;
-    }
+    public TemplateLoader(String templateFilePath) { this.templateFilePath = templateFilePath; }
 
     public Map<String, PdfTemplate> loadAll() throws IOException {
         Path path = Path.of(templateFilePath);
@@ -36,7 +33,7 @@ public class TemplateLoader {
             try {
                 PdfTemplate t = buildTemplate(objJson);
                 templates.put(t.getId(), t);
-                logger.fine("Loaded template: " + t);
+                logger.fine("Loaded: " + t);
             } catch (Exception e) {
                 logger.warning("Skipping invalid template: " + e.getMessage());
             }
@@ -50,56 +47,32 @@ public class TemplateLoader {
     }
 
     // -----------------------------------------------------------------------
-    // Parsing
+    // Template building
     // -----------------------------------------------------------------------
-
-    /** Extracts raw JSON strings for each object in the top-level "templates" array. */
-    private List<String> extractTopLevelObjects(String json) {
-        List<String> objects = new ArrayList<>();
-        int arrayStart = json.indexOf('[');
-        int arrayEnd   = json.lastIndexOf(']');
-        if (arrayStart == -1 || arrayEnd == -1) return objects;
-        String array = json.substring(arrayStart + 1, arrayEnd);
-
-        int depth = 0, objStart = -1;
-        for (int i = 0; i < array.length(); i++) {
-            char c = array.charAt(i);
-            if      (c == '{') { if (depth == 0) objStart = i; depth++; }
-            else if (c == '}') { depth--; if (depth == 0 && objStart != -1) { objects.add(array.substring(objStart, i + 1)); objStart = -1; } }
-        }
-        return objects;
-    }
 
     private PdfTemplate buildTemplate(String objJson) {
         Map<String, String> flat = parseScalarFields(objJson);
-
         String id          = require(flat, "id");
         String description = flat.getOrDefault("description", "");
         String configId    = flat.getOrDefault("configId", "default");
 
-        // Parse optional header object
         PageHeader header = parseHeaderObject(extractNestedObject(objJson, "header"));
+        PageFooter footer = parseFooterObject(extractNestedObject(objJson, "footer"));
 
-        // Parse sections array
         String sectionsRaw = extractArrayContent(objJson, "sections");
         List<TemplateSection> sections = sectionsRaw != null
             ? parseSections(sectionsRaw) : List.of();
 
         return new PdfTemplate.Builder()
-            .id(id)
-            .description(description)
-            .configId(configId)
-            .header(header)
-            .sections(sections)
+            .id(id).description(description).configId(configId)
+            .header(header).footer(footer).sections(sections)
             .build();
     }
 
-    /** Parses a "header": { ... } block into a PageHeader. Returns null if absent. */
-    private PageHeader parseHeaderObject(String headerJson) {
-        if (headerJson == null || headerJson.isBlank()) return null;
-        Map<String, String> m = parseScalarFields(headerJson);
+    private PageHeader parseHeaderObject(String json) {
+        if (json == null || json.isBlank()) return null;
+        Map<String, String> m = parseScalarFields(json);
         if (m.isEmpty()) return null;
-
         return new PageHeader.Builder()
             .logoPath(m.get("logoPath"))
             .logoAlign(m.getOrDefault("logoAlign", "left"))
@@ -109,26 +82,37 @@ public class TemplateLoader {
             .build();
     }
 
-    /** Parses the sections array into TemplateSection objects. */
+    private PageFooter parseFooterObject(String json) {
+        if (json == null || json.isBlank()) return null;
+        Map<String, String> m = parseScalarFields(json);
+        if (m.isEmpty()) return null;
+        return new PageFooter.Builder()
+            .leftText(m.get("leftText"))
+            .centerText(m.get("centerText"))
+            .rightText(m.get("rightText"))
+            .showPageNumbers(!"false".equalsIgnoreCase(m.getOrDefault("showPageNumbers", "true")))
+            .pageNumberFormat(m.get("pageNumberFormat"))
+            .bandColor(m.get("bandColor"))
+            .bandHeight(floatVal(m, "bandHeight", 28f))
+            .build();
+    }
+
+    // -----------------------------------------------------------------------
+    // Section parsing
+    // -----------------------------------------------------------------------
+
     private List<TemplateSection> parseSections(String sectionsJson) {
         List<TemplateSection> sections = new ArrayList<>();
         int depth = 0, objStart = -1;
+
         for (int i = 0; i < sectionsJson.length(); i++) {
             char c = sectionsJson.charAt(i);
             if      (c == '{') { if (depth == 0) objStart = i; depth++; }
             else if (c == '}') {
                 depth--;
                 if (depth == 0 && objStart != -1) {
-                    Map<String, String> m = parseScalarFields(sectionsJson.substring(objStart + 1, i));
-                    try {
-                        TemplateSection.Type  type         = TemplateSection.Type.fromString(m.get("type"));
-                        String                content      = m.get("content");
-                        TemplateSection.Align align        = parseAlign(m.getOrDefault("align", "left"));
-                        int                   widthPercent = intVal(m, "widthPercent", 100);
-                        sections.add(new TemplateSection(type, content, align, widthPercent));
-                    } catch (Exception e) {
-                        logger.warning("Skipping invalid section: " + e.getMessage());
-                    }
+                    try { sections.add(parseSection(sectionsJson.substring(objStart, i + 1))); }
+                    catch (Exception e) { logger.warning("Skipping section: " + e.getMessage()); }
                     objStart = -1;
                 }
             }
@@ -136,11 +120,79 @@ public class TemplateLoader {
         return sections;
     }
 
+    private TemplateSection parseSection(String sectionJson) {
+        Map<String, String> m = parseScalarFields(sectionJson);
+        TemplateSection.Type type = TemplateSection.Type.fromString(m.get("type"));
+
+        TemplateSection.Builder builder = new TemplateSection.Builder(type)
+            .content(m.get("content"))
+            .align(parseAlign(m.getOrDefault("align", "left")))
+            .widthPercent(intVal(m, "widthPercent", 100))
+            .bgColor(m.get("bgColor"));
+
+        if (type == TemplateSection.Type.TABLE) {
+            builder.dataKey(m.get("dataKey"))
+                   .headerBgColor(m.get("headerBgColor"))
+                   .alternateRowColor(m.get("alternateRowColor"))
+                   .repeatHeaderOnPage(!"false".equalsIgnoreCase(m.getOrDefault("repeatHeaderOnPage", "true")));
+            String columnsRaw = extractArrayContent(sectionJson, "columns");
+            if (columnsRaw != null) builder.columns(parseColumns(columnsRaw));
+        }
+
+        if (type == TemplateSection.Type.COLUMNS) {
+            // Parse left and right sub-section arrays
+            String leftRaw  = extractArrayContent(sectionJson, "left");
+            String rightRaw = extractArrayContent(sectionJson, "right");
+            int leftWidth   = intVal(m, "leftWidth", 50);
+            List<TemplateSection> left  = leftRaw  != null ? parseSections(leftRaw)  : List.of();
+            List<TemplateSection> right = rightRaw != null ? parseSections(rightRaw) : List.of();
+            builder.columnsData(new ColumnsSection(leftWidth, left, right));
+        }
+
+        return builder.build();
+    }
+
+    private List<ColumnDef> parseColumns(String columnsJson) {
+        List<ColumnDef> columns = new ArrayList<>();
+        int depth = 0, objStart = -1;
+        for (int i = 0; i < columnsJson.length(); i++) {
+            char c = columnsJson.charAt(i);
+            if      (c == '{') { if (depth == 0) objStart = i; depth++; }
+            else if (c == '}') {
+                depth--;
+                if (depth == 0 && objStart != -1) {
+                    Map<String, String> m = parseScalarFields(columnsJson.substring(objStart + 1, i));
+                    columns.add(new ColumnDef(
+                        m.getOrDefault("key", ""),
+                        m.getOrDefault("header", m.getOrDefault("key", "")),
+                        intVal(m, "widthPct", 20),
+                        ColumnDef.alignFromString(m.getOrDefault("align", "left"))
+                    ));
+                    objStart = -1;
+                }
+            }
+        }
+        return columns;
+    }
+
     // -----------------------------------------------------------------------
-    // JSON extraction helpers
+    // JSON helpers
     // -----------------------------------------------------------------------
 
-    /** Extracts the content of a named nested object: "key": { ... } -> "{ ... }" */
+    private List<String> extractTopLevelObjects(String json) {
+        List<String> objects = new ArrayList<>();
+        int arrayStart = json.indexOf('['), arrayEnd = json.lastIndexOf(']');
+        if (arrayStart == -1 || arrayEnd == -1) return objects;
+        String array = json.substring(arrayStart + 1, arrayEnd);
+        int depth = 0, objStart = -1;
+        for (int i = 0; i < array.length(); i++) {
+            char c = array.charAt(i);
+            if      (c == '{') { if (depth == 0) objStart = i; depth++; }
+            else if (c == '}') { depth--; if (depth == 0 && objStart != -1) { objects.add(array.substring(objStart, i + 1)); objStart = -1; } }
+        }
+        return objects;
+    }
+
     private String extractNestedObject(String json, String key) {
         String marker = "\"" + key + "\"";
         int keyPos = json.indexOf(marker);
@@ -155,7 +207,6 @@ public class TemplateLoader {
         return end != -1 ? json.substring(braceStart, end + 1) : null;
     }
 
-    /** Extracts the content of a named array: "key": [ ... ] -> contents between brackets */
     private String extractArrayContent(String json, String key) {
         String marker = "\"" + key + "\"";
         int keyPos = json.indexOf(marker);
@@ -170,20 +221,18 @@ public class TemplateLoader {
         return end != -1 ? json.substring(bracketStart + 1, end) : null;
     }
 
-    /** Parses all "key": "value" or "key": number scalar pairs from an object body. */
     private Map<String, String> parseScalarFields(String objContent) {
         Map<String, String> map = new LinkedHashMap<>();
-        Matcher m = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(?:\"((?:[^\"\\\\]|\\\\.)*)\"|([\\d.]+))").matcher(objContent);
+        Matcher m = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(?:\"((?:[^\"\\\\]|\\\\.)*)\"|([\\d.\\-]+)|(true|false))")
+                           .matcher(objContent);
         while (m.find()) {
             String key   = m.group(1).trim();
-            String value = m.group(2) != null ? unescape(m.group(2)) : m.group(3);
-            map.put(key, value);
+            String value = m.group(2) != null ? unescape(m.group(2))
+                         : m.group(3) != null ? m.group(3)
+                         : m.group(4);
+            if (value != null) map.put(key, value);
         }
         return map;
-    }
-
-    private String unescape(String v) {
-        return v.replace("\\n", "\n").replace("\\t", "\t").replace("\\\"", "\"").replace("\\\\", "\\");
     }
 
     private TemplateSection.Align parseAlign(String v) {
@@ -195,9 +244,13 @@ public class TemplateLoader {
         };
     }
 
+    private String unescape(String v) {
+        return v.replace("\\n", "\n").replace("\\t", "\t").replace("\\\"", "\"").replace("\\\\", "\\");
+    }
+
     private String require(Map<String, String> m, String key) {
         String v = m.get(key);
-        if (v == null || v.isBlank()) throw new IllegalArgumentException("Missing required field: " + key);
+        if (v == null || v.isBlank()) throw new IllegalArgumentException("Missing field: " + key);
         return v;
     }
 

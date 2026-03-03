@@ -1,101 +1,110 @@
 package com.pdfcreator.template;
 
+import com.pdfcreator.datasource.DocumentData;
+
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.regex.*;
 
 /**
- * Resolves {{placeholder}} tokens in template section content
- * by substituting values from a data map.
+ * Resolves {{placeholder}} tokens using DocumentData scalar values.
  *
- * Placeholder syntax:  {{key}}
- *   - Keys are case-sensitive
- *   - Whitespace inside braces is ignored: {{ key }} resolves the same as {{key}}
- *   - Unresolved placeholders (keys not in the data map) are left as-is
- *     and a warning is logged so the caller knows what data is missing
- *
- * Example:
- *   Template content : "Invoice #{{invoice_no}} — {{client_name}}"
- *   Data map         : { "invoice_no": "0042", "client_name": "Acme Ltd" }
- *   Resolved output  : "Invoice #0042 — Acme Ltd"
+ * Added vs previous version:
+ *   - resolveFooter() — resolves text fields in PageFooter
+ *   - resolveSections() handles COLUMNS sub-sections recursively
  */
 public class PlaceholderResolver {
 
-    private static final Logger logger = Logger.getLogger(PlaceholderResolver.class.getName());
-
-    // Matches {{key}} with optional surrounding whitespace inside braces
+    private static final Logger  logger      = Logger.getLogger(PlaceholderResolver.class.getName());
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{\\s*([^}]+?)\\s*\\}\\}");
 
-    private final Map<String, String> data;
+    private final Map<String, String> scalars;
 
-    public PlaceholderResolver(Map<String, String> data) {
-        this.data = data != null ? data : Map.of();
+    public PlaceholderResolver(DocumentData data) {
+        this.scalars = data != null ? data.getScalars() : Map.of();
     }
 
-    /**
-     * Resolves all placeholders in the given text.
-     * Returns the original text if it contains no placeholders.
-     * Returns null unchanged if input is null.
-     */
     public String resolve(String text) {
         if (text == null || text.isBlank()) return text;
-
-        Matcher matcher = PLACEHOLDER.matcher(text);
-        if (!matcher.find()) return text; // fast path — no placeholders
-
-        // Reset and process
-        matcher.reset();
-        StringBuffer result = new StringBuffer();
-        while (matcher.find()) {
-            String key   = matcher.group(1);
-            String value = data.get(key);
+        Matcher m = PLACEHOLDER.matcher(text);
+        if (!m.find()) return text;
+        m.reset();
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String key   = m.group(1);
+            String value = scalars.get(key);
             if (value != null) {
-                matcher.appendReplacement(result, Matcher.quoteReplacement(value));
+                m.appendReplacement(sb, Matcher.quoteReplacement(value));
             } else {
-                logger.warning("Unresolved placeholder: {{" + key + "}} — no value provided in data file.");
-                matcher.appendReplacement(result, matcher.group(0)); // leave as-is
+                logger.warning("Unresolved placeholder: {{" + key + "}}");
+                m.appendReplacement(sb, m.group(0));
             }
         }
-        matcher.appendTail(result);
-        return result.toString();
+        m.appendTail(sb);
+        return sb.toString();
     }
 
-    /**
-     * Resolves all placeholders across an entire list of sections.
-     * Returns a new list of sections with resolved content — originals are unchanged.
-     */
+    /** Resolves placeholders in all sections, including COLUMNS sub-sections. */
     public List<TemplateSection> resolveSections(List<TemplateSection> sections) {
         List<TemplateSection> resolved = new ArrayList<>(sections.size());
         for (TemplateSection section : sections) {
-            String resolvedContent = resolve(section.getContent());
-            resolved.add(section.withContent(resolvedContent));
+            if (section.getType() == TemplateSection.Type.COLUMNS && section.getColumnsData() != null) {
+                ColumnsSection cols = section.getColumnsData();
+                ColumnsSection resolvedCols = new ColumnsSection(
+                    cols.getLeftWidthPct(),
+                    resolveSections(cols.getLeft()),
+                    resolveSections(cols.getRight())
+                );
+                resolved.add(new TemplateSection.Builder(section).columnsData(resolvedCols).build());
+            } else {
+                resolved.add(section.withContent(resolve(section.getContent())));
+            }
         }
         return resolved;
     }
 
-    /**
-     * Returns all placeholder keys found in a list of sections.
-     * Useful for validating that all required data keys are present before rendering.
-     */
+    /** Resolves {{placeholders}} in PageHeader logo path. */
+    public PageHeader resolveHeader(PageHeader header) {
+        if (header == null || !header.hasLogo()) return header;
+        String resolved = resolve(header.getLogoPath());
+        if (resolved.equals(header.getLogoPath())) return header;
+        return new PageHeader.Builder()
+            .logoPath(resolved)
+            .logoAlign(header.getLogoAlign().name())
+            .logoWidthPercent(header.getLogoWidthPercent())
+            .bandColor(header.getBandColor())
+            .bandHeight(header.getBandHeight())
+            .build();
+    }
+
+    /** Resolves {{placeholders}} in all PageFooter text fields. */
+    public PageFooter resolveFooter(PageFooter footer) {
+        if (footer == null) return null;
+        return footer.withResolvedText(
+            resolve(footer.getLeftText()),
+            resolve(footer.getCenterText()),
+            resolve(footer.getRightText())
+        );
+    }
+
     public static Set<String> extractPlaceholders(List<TemplateSection> sections) {
         Set<String> keys = new LinkedHashSet<>();
-        for (TemplateSection section : sections) {
-            if (section.getContent() == null) continue;
-            Matcher m = PLACEHOLDER.matcher(section.getContent());
-            while (m.find()) keys.add(m.group(1).trim());
+        for (TemplateSection s : sections) {
+            if (s.getType() == TemplateSection.Type.COLUMNS && s.getColumnsData() != null) {
+                keys.addAll(extractPlaceholders(s.getColumnsData().getLeft()));
+                keys.addAll(extractPlaceholders(s.getColumnsData().getRight()));
+            } else if (s.getContent() != null) {
+                Matcher m = PLACEHOLDER.matcher(s.getContent());
+                while (m.find()) keys.add(m.group(1).trim());
+            }
         }
         return keys;
     }
 
-    /**
-     * Validates that all placeholders in the given sections have a corresponding
-     * value in the data map. Returns a list of missing keys (empty = all good).
-     */
     public List<String> findMissingKeys(List<TemplateSection> sections) {
         List<String> missing = new ArrayList<>();
-        for (String key : extractPlaceholders(sections)) {
-            if (!data.containsKey(key)) missing.add(key);
-        }
+        for (String key : extractPlaceholders(sections))
+            if (!scalars.containsKey(key)) missing.add(key);
         return missing;
     }
 }

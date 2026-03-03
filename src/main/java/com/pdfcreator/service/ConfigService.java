@@ -61,7 +61,7 @@ public class ConfigService {
 
         return cache.get(id).orElseThrow(() ->
             new IllegalArgumentException(
-                "No config found with id: '" + id
+                "No config found with id: '" + id + "'. "                
             )
         );
     }

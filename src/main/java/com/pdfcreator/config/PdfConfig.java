@@ -3,11 +3,9 @@ package com.pdfcreator.config;
 /**
  * Immutable data model representing a PDF configuration preset.
  *
- * New fields vs previous version:
- *   - fontColor        : hex color for body text        (e.g. "#000000")
- *   - titleColor       : hex color for title text       (e.g. "#003366")
- *   - backgroundColor  : hex color for page background  (e.g. "#FFFFFF")
- *                        set to null or "" to skip background fill
+ * Added vs previous version:
+ *   - Copy constructor on Builder(PdfConfig source) — used by ColumnsRenderer
+ *     to produce column-scoped configs with overridden margins.
  */
 public class PdfConfig {
 
@@ -21,8 +19,6 @@ public class PdfConfig {
     private final float  marginRight;
     private final float  lineSpacing;
     private final String fontFamily;
-
-    // --- New color fields ---
     private final String fontColor;
     private final String titleColor;
     private final String backgroundColor;
@@ -43,8 +39,6 @@ public class PdfConfig {
         this.backgroundColor = builder.backgroundColor;
     }
 
-    // --- Getters ---
-
     public String getId()              { return id; }
     public String getPageSize()        { return pageSize; }
     public int    getTitleFontSize()   { return titleFontSize; }
@@ -63,15 +57,12 @@ public class PdfConfig {
     public String toString() {
         return String.format(
             "PdfConfig[id=%s, pageSize=%s, titleFont=%d, bodyFont=%d, " +
-            "margins=(t:%.0f b:%.0f l:%.0f r:%.0f), lineSpacing=%.1f, " +
-            "font=%s, fontColor=%s, titleColor=%s, bgColor=%s]",
+            "margins=(t:%.0f b:%.0f l:%.0f r:%.0f), spacing=%.1f, " +
+            "font=%s, fontColor=%s, titleColor=%s]",
             id, pageSize, titleFontSize, bodyFontSize,
             marginTop, marginBottom, marginLeft, marginRight,
-            lineSpacing, fontFamily, fontColor, titleColor, backgroundColor
-        );
+            lineSpacing, fontFamily, fontColor, titleColor);
     }
-
-    // --- Builder ---
 
     public static class Builder {
         private String id;
@@ -86,26 +77,44 @@ public class PdfConfig {
         private String fontFamily      = "HELVETICA";
         private String fontColor       = "#000000";
         private String titleColor      = "#000000";
-        private String backgroundColor = null;   // null = no background fill
+        private String backgroundColor = null;
 
-        public Builder id(String id)                         { this.id = id; return this; }
-        public Builder pageSize(String v)                    { this.pageSize = v; return this; }
-        public Builder titleFontSize(int v)                  { this.titleFontSize = v; return this; }
-        public Builder bodyFontSize(int v)                   { this.bodyFontSize = v; return this; }
-        public Builder marginTop(float v)                    { this.marginTop = v; return this; }
-        public Builder marginBottom(float v)                 { this.marginBottom = v; return this; }
-        public Builder marginLeft(float v)                   { this.marginLeft = v; return this; }
-        public Builder marginRight(float v)                  { this.marginRight = v; return this; }
-        public Builder lineSpacing(float v)                  { this.lineSpacing = v; return this; }
-        public Builder fontFamily(String v)                  { this.fontFamily = v; return this; }
-        public Builder fontColor(String v)                   { this.fontColor = v; return this; }
-        public Builder titleColor(String v)                  { this.titleColor = v; return this; }
-        public Builder backgroundColor(String v)             { this.backgroundColor = v; return this; }
+        public Builder() {}
+
+        /** Copy constructor — inherits all values from an existing config. */
+        public Builder(PdfConfig source) {
+            this.id              = source.id;
+            this.pageSize        = source.pageSize;
+            this.titleFontSize   = source.titleFontSize;
+            this.bodyFontSize    = source.bodyFontSize;
+            this.marginTop       = source.marginTop;
+            this.marginBottom    = source.marginBottom;
+            this.marginLeft      = source.marginLeft;
+            this.marginRight     = source.marginRight;
+            this.lineSpacing     = source.lineSpacing;
+            this.fontFamily      = source.fontFamily;
+            this.fontColor       = source.fontColor;
+            this.titleColor      = source.titleColor;
+            this.backgroundColor = source.backgroundColor;
+        }
+
+        public Builder id(String id)               { this.id = id; return this; }
+        public Builder pageSize(String v)          { this.pageSize = v; return this; }
+        public Builder titleFontSize(int v)        { this.titleFontSize = v; return this; }
+        public Builder bodyFontSize(int v)         { this.bodyFontSize = v; return this; }
+        public Builder marginTop(float v)          { this.marginTop = v; return this; }
+        public Builder marginBottom(float v)       { this.marginBottom = v; return this; }
+        public Builder marginLeft(float v)         { this.marginLeft = v; return this; }
+        public Builder marginRight(float v)        { this.marginRight = v; return this; }
+        public Builder lineSpacing(float v)        { this.lineSpacing = v; return this; }
+        public Builder fontFamily(String v)        { this.fontFamily = v; return this; }
+        public Builder fontColor(String v)         { this.fontColor = v; return this; }
+        public Builder titleColor(String v)        { this.titleColor = v; return this; }
+        public Builder backgroundColor(String v)   { this.backgroundColor = v; return this; }
 
         public PdfConfig build() {
-            if (id == null || id.isBlank()) {
+            if (id == null || id.isBlank())
                 throw new IllegalStateException("PdfConfig must have an id");
-            }
             return new PdfConfig(this);
         }
     }

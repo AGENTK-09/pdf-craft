@@ -6,51 +6,42 @@ import java.util.List;
 /**
  * Immutable data model representing a PDF template definition.
  *
- * New vs previous version:
- *   - header (PageHeader) : optional branding header drawn on every page
- *
- * Example JSON:
- * {
- *   "id": "branded-invoice",
- *   "description": "Invoice with company branding",
- *   "configId": "report",
- *   "header": {
- *     "logoPath":         "assets/logo.png",
- *     "logoAlign":        "right",
- *     "logoWidthPercent": 20,
- *     "bandColor":        "#003366",
- *     "bandHeight":       60
- *   },
- *   "sections": [ ... ]
- * }
+ * Fields added vs previous version:
+ *   footer (PageFooter) — optional configurable footer on every page
  */
 public class PdfTemplate {
 
     private final String               id;
     private final String               description;
     private final String               configId;
-    private final PageHeader           header;    // null = no per-page header
+    private final PageHeader           header;
+    private final PageFooter           footer;
     private final List<TemplateSection> sections;
 
-    private PdfTemplate(Builder builder) {
-        this.id          = builder.id;
-        this.description = builder.description;
-        this.configId    = builder.configId;
-        this.header      = builder.header;
-        this.sections    = Collections.unmodifiableList(builder.sections);
+    private PdfTemplate(Builder b) {
+        this.id          = b.id;
+        this.description = b.description;
+        this.configId    = b.configId;
+        this.header      = b.header;
+        this.footer      = b.footer;
+        this.sections    = Collections.unmodifiableList(b.sections);
     }
 
-    public String                getId()          { return id; }
-    public String                getDescription() { return description; }
-    public String                getConfigId()    { return configId; }
-    public PageHeader            getHeader()      { return header; }   // may be null
-    public List<TemplateSection>  getSections()   { return sections; }
-    public boolean               hasHeader()      { return header != null; }
+    public String               getId()          { return id; }
+    public String               getDescription() { return description; }
+    public String               getConfigId()    { return configId; }
+    public PageHeader           getHeader()      { return header; }
+    public PageFooter           getFooter()      { return footer; }
+    public List<TemplateSection> getSections()   { return sections; }
+    public boolean              hasHeader()      { return header != null; }
+    public boolean              hasFooter()      { return footer != null; }
 
     @Override
     public String toString() {
-        return String.format("PdfTemplate[id=%s, configId=%s, sections=%d, header=%s]",
-            id, configId, sections.size(), header != null ? header : "none");
+        return String.format("PdfTemplate[id=%s, configId=%s, sections=%d, header=%s, footer=%s]",
+            id, configId, sections.size(),
+            header != null ? "yes" : "none",
+            footer != null ? "yes" : "none");
     }
 
     public static class Builder {
@@ -58,12 +49,14 @@ public class PdfTemplate {
         private String               description = "";
         private String               configId    = "default";
         private PageHeader           header      = null;
+        private PageFooter           footer      = null;
         private List<TemplateSection> sections   = List.of();
 
-        public Builder id(String id)                           { this.id = id; return this; }
+        public Builder id(String v)                            { this.id = v; return this; }
         public Builder description(String v)                   { this.description = v; return this; }
         public Builder configId(String v)                      { this.configId = v; return this; }
         public Builder header(PageHeader v)                    { this.header = v; return this; }
+        public Builder footer(PageFooter v)                    { this.footer = v; return this; }
         public Builder sections(List<TemplateSection> sections){ this.sections = sections; return this; }
 
         public PdfTemplate build() {
