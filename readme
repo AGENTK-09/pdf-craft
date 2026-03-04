@@ -1,0 +1,106 @@
+# Dark mode document
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --config-id dark --title "Dark Report" \
+  --text "This is body text on a dark background." --output dark.pdf
+
+# Report with an embedded chart image
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --config-id report --title "Analysis" \
+  --text "See the chart below." --image ./chart.png --output analysis.pdf
+
+# Multiple images
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --config-id default --title "Gallery" \
+  --images ./chart.png,./chart.png --output gallery.pdf
+
+# Text from a file
+java -jar pdf-creator.jar --title "Report" \
+  --text-file ./report.txt --output report.pdf
+
+# Inline only (as before)
+java -jar pdf-creator.jar --title "Note" \
+  --text "Hello world" --output note.pdf
+
+# Both — file body + CLI appendix
+java -jar pdf-creator.jar --title "Report" \
+  --text-file ./report.txt \
+  --text "Appendix: approved by Jane." \
+  --output report.pdf
+```
+
+The console output will now also tell you where the text came from:
+```
+Using config  : report
+Output file   : report.pdf
+Text source   : file (./report.txt) + inline --text
+
+# Single page test
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
+  --config-id default \
+  --title "Status Update" \
+  --author "Jane Doe" \
+  --text-file test-single-page.txt \
+  --output out-single.pdf
+
+# Multi page test
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
+  --config-id report \
+  --title "Annual Technology Review" \
+  --author "Engineering Team" \
+  --text-file test-multi-page.txt \
+  --output out-multi.pdf
+
+# Try the compact preset — smaller font means more fits per page
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
+  --config-id compact \
+  --title "Annual Technology Review" \
+  --text-file test-multi-page.txt \
+  --output out-compact.pdf
+
+
+  # Put your logo at assets/logo.png first, then:
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
+  --template-id branded-invoice \
+  --data-file data/branded-invoice-acme.json \
+  --output branded-invoice.pdf
+
+# Single bank statement
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
+  --template-id bank-statement \
+  --data-file data/statements/CUST-001.json \
+  --output output/CUST-001-feb26.pdf
+
+# Batch — all statements in the directory, 8 threads
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --batch \
+  --template-id bank-statement \
+  --data-dir data/statements/ \
+  --output-dir output/statements/ \
+  --threads 8
+
+# Credit card statement (different template, same data shape)
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
+  --template-id credit-card-statement \
+  --data-file data/cards/CARD-001.json \
+  --output output/CARD-001-feb26.pdf
+
+# Incorporating Metadata 
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
+  --title    "Q1 2026 Meeting Notes" \
+  --author   "Jane Smith" \
+  --subject  "Quarterly planning meeting summary" \
+  --keywords "meeting notes Q1 2026 planning budget" \
+  --creator  "Internal Planning Tool" \
+  --text     "Key decisions: approved Q1 budget..." \
+  --output   notes.pdf
+
+# All text to stdout
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input report.pdf
+
+# Pages 1-2, saved to file
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input out-single.pdf \
+  --output report.txt --start-page 1 --end-page 2
+
+# Normalised, no metadata header, flat output
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input out-single.pdf \
+  --strip-whitespace --no-metadata --no-per-page
+
+# Normalised, no metadata header, flat output, saved to file
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input out-compact.pdf \
+  --strip-whitespace --no-metadata --no-per-page --output report-compact.txt

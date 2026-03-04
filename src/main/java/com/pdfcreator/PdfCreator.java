@@ -8,6 +8,7 @@ import com.pdfcreator.generator.PageContext;
 import com.pdfcreator.pipeline.RenderPipeline;
 import com.pdfcreator.renderer.SectionRendererRegistry;
 import com.pdfcreator.service.ConfigService;
+import com.pdfcreator.extractor.PdfExtractorCli;
 import com.pdfcreator.template.DocumentMetadata;
 import com.pdfcreator.template.TemplateSection;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -42,6 +43,12 @@ public class PdfCreator {
         String configFile   = getArg(args, "--config-file",   DEFAULT_CONFIG_FILE);
         String templateFile = getArg(args, "--template-file", DEFAULT_TEMPLATE_FILE);
         String templateId   = getArg(args, "--template-id",   null);
+
+        if (hasFlag(args, "--extract")) {
+            // ---- EXTRACT MODE ----
+            new PdfExtractorCli().run(args);
+            return;
+        }
 
         if (hasFlag(args, "--batch")) {
             // ---- BATCH MODE ----
@@ -185,6 +192,20 @@ public class PdfCreator {
               --config-file <path>     Config presets (default: configs/pdf-configs.json)
 
             EXAMPLES:
+              # Extract all text from a PDF to stdout
+              java -jar pdf-creator.jar --extract \\
+                --input output/statement.pdf
+
+              # Extract pages 1-2, save to file
+              java -jar pdf-creator.jar --extract \\
+                --input output/statement.pdf --output extracted.txt \\
+                --start-page 1 --end-page 2
+
+              # Normalised, no metadata, flat output
+              java -jar pdf-creator.jar --extract \\
+                --input output/statement.pdf \\
+                --strip-whitespace --no-metadata --no-per-page
+
               # Single bank statement
               java -jar pdf-creator.jar \\
                 --template-id bank-statement \\
