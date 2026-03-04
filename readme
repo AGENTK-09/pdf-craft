@@ -104,3 +104,12 @@ java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input out-single.pdf \
 # Normalised, no metadata header, flat output, saved to file
 java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input out-compact.pdf \
   --strip-whitespace --no-metadata --no-per-page --output report-compact.txt
+
+# All images to extracted-images/ (default dir)
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract-images --input statement.pdf
+
+# JPEG, min 100x100, pages 1-3 only, custom output dir
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract-images \
+  --input gallery.pdf --output-dir output/images/ \
+  --img-format jpg --min-width 100 --min-height 100 \
+  --start-page 1 --end-page 3
