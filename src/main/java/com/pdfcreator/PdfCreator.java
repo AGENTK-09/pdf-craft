@@ -44,8 +44,9 @@ public class PdfCreator {
         String templateFile = getArg(args, "--template-file", DEFAULT_TEMPLATE_FILE);
         String templateId   = getArg(args, "--template-id",   null);
 
-        if (hasFlag(args, "--extract")) {
-            // ---- EXTRACT MODE ----
+        if (hasFlag(args, "--extract") || hasFlag(args, "--extract-images")) {
+            // ---- EXTRACT / EXTRACT-IMAGES MODE ----
+            // PdfExtractorCli.run() dispatches internally based on which flag is present
             new PdfExtractorCli().run(args);
             return;
         }
@@ -187,6 +188,27 @@ public class PdfCreator {
               --text / --text-file / --image / --images
               --output <file>
 
+            EXTRACT MODE (text):
+              --extract
+              --input <path>           PDF file to extract text from (required)
+              --output <path>          Write extracted text to file (default: stdout)
+              --start-page <n>         First page, 1-based (default: 1)
+              --end-page <n>           Last page, 1-based (default: last)
+              --no-sort                Disable position-based text sorting
+              --strip-whitespace       Collapse whitespace into single space
+              --no-metadata            Suppress metadata header block
+              --no-per-page            Print flat text without page separators
+
+            EXTRACT MODE (images):
+              --extract-images
+              --input <path>           PDF file to extract images from (required)
+              --output-dir <path>      Directory to save images (default: extracted-images/)
+              --img-format <fmt>       png (default, lossless) or jpg (lossy)
+              --min-width <n>          Skip images narrower than N pixels (default: 10)
+              --min-height <n>         Skip images shorter than N pixels (default: 10)
+              --start-page <n>         First page to scan, 1-based (default: 1)
+              --end-page <n>           Last page to scan, 1-based (default: last)
+
             SHARED OPTIONS:
               --template-file <path>   Template definitions (default: templates/pdf-templates.json)
               --config-file <path>     Config presets (default: configs/pdf-configs.json)
@@ -205,6 +227,17 @@ public class PdfCreator {
               java -jar pdf-creator.jar --extract \\
                 --input output/statement.pdf \\
                 --strip-whitespace --no-metadata --no-per-page
+
+              # Extract all images from a PDF
+              java -jar pdf-creator.jar --extract-images \\
+                --input output/statement.pdf
+
+              # Extract images as JPEGs, min 100x100px, pages 1-3
+              java -jar pdf-creator.jar --extract-images \\
+                --input output/report.pdf \\
+                --output-dir output/images/ \\
+                --img-format jpg --min-width 100 --min-height 100 \\
+                --start-page 1 --end-page 3
 
               # Single bank statement
               java -jar pdf-creator.jar \\

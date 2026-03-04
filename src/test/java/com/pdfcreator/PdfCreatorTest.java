@@ -87,6 +87,9 @@ public class PdfCreatorTest {
         test16_extract_pageRange();
         test17_extract_metadataFields();
         test18_extract_toFile();
+        test19_extractImages_fromGeneratedPdf();
+        test20_extractImages_minSizeFilter();
+        test21_extractImages_toDirectory();
 
         // ── Summary ────────────────────────────────────────────────────────
         System.out.println();
@@ -584,6 +587,116 @@ public class PdfCreatorTest {
 
             System.out.printf("      output file size: %d bytes%n",
                 new java.io.File(textPath).length());
+        });
+    }
+
+
+    // -----------------------------------------------------------------------
+    // TEST 19 — Image extraction: extract images from a generated PDF
+    //           Uses the bank statement from test 04 (contains a logo image).
+    //           Verifies: list is non-null, each image has valid dimensions and data.
+    // -----------------------------------------------------------------------
+    static void test19_extractImages_fromGeneratedPdf() {
+        run("19 Extract Images — from generated PDF", () -> {
+            String pdfPath = OUT_DIR + "/04-bank-statement-cust001.pdf";
+            java.io.File pdfFile = new java.io.File(pdfPath);
+            if (!pdfFile.exists()) {
+                PdfCreator.main(new String[]{
+                    "--template-id", "bank-statement",
+                    "--data-file",   DATA_DIR + "/statements/CUST-001.json",
+                    "--output",      pdfPath
+                });
+            }
+
+            com.pdfcreator.extractor.PdfImageExtractor extractor =
+                new com.pdfcreator.extractor.PdfImageExtractor();
+            java.util.List<com.pdfcreator.extractor.ExtractedImage> images =
+                extractor.extract(pdfPath);
+
+            // Result must be a non-null list (may be empty if no images above threshold)
+            if (images == null)
+                throw new AssertionError("extract() returned null");
+
+            System.out.printf("      images found: %d%n", images.size());
+
+            // Validate each extracted image
+            for (com.pdfcreator.extractor.ExtractedImage img : images) {
+                if (img.getWidth()  <= 0) throw new AssertionError("Image width <= 0: " + img);
+                if (img.getHeight() <= 0) throw new AssertionError("Image height <= 0: " + img);
+                if (img.getData()   == null || img.getData().length == 0)
+                    throw new AssertionError("Image data is empty: " + img);
+                if (img.getSuggestedName() == null || img.getSuggestedName().isBlank())
+                    throw new AssertionError("Image has no suggested name: " + img);
+                if (img.getPageNumber() < 1)
+                    throw new AssertionError("Invalid page number: " + img);
+                System.out.printf("        %s%n", img);
+            }
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 20 — Image extraction: minimum size filter
+    //           Sets a large minimum size so no images pass the filter.
+    //           Verifies: empty list returned, no exception thrown.
+    // -----------------------------------------------------------------------
+    static void test20_extractImages_minSizeFilter() {
+        run("20 Extract Images — min size filter (expect 0 results)", () -> {
+            String pdfPath = OUT_DIR + "/04-bank-statement-cust001.pdf";
+
+            com.pdfcreator.extractor.ImageExtractionOptions opts =
+                new com.pdfcreator.extractor.ImageExtractionOptions.Builder()
+                    .minWidth(99999)    // unreachably large — all images filtered out
+                    .minHeight(99999)
+                    .build();
+
+            com.pdfcreator.extractor.PdfImageExtractor extractor =
+                new com.pdfcreator.extractor.PdfImageExtractor();
+            java.util.List<com.pdfcreator.extractor.ExtractedImage> images =
+                extractor.extract(pdfPath, opts);
+
+            assertEquals("All images should be filtered by min size", 0, images.size());
+            System.out.printf("      correctly returned 0 images with 99999px filter%n");
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 21 — Image extraction: extractToDirectory saves files to disk
+    //           Verifies: output directory created, files written,
+    //           file sizes match ExtractedImage.getSizeBytes().
+    // -----------------------------------------------------------------------
+    static void test21_extractImages_toDirectory() {
+        run("21 Extract Images — save to directory", () -> {
+            String pdfPath  = OUT_DIR + "/04-bank-statement-cust001.pdf";
+            String imageDir = OUT_DIR + "/21-extracted-images/";
+
+            com.pdfcreator.extractor.ImageExtractionOptions opts =
+                new com.pdfcreator.extractor.ImageExtractionOptions.Builder()
+                    .minWidth(1).minHeight(1)   // accept everything
+                    .preferredFormat("png")
+                    .build();
+
+            com.pdfcreator.extractor.PdfImageExtractor extractor =
+                new com.pdfcreator.extractor.PdfImageExtractor();
+            java.util.List<com.pdfcreator.extractor.ExtractedImage> images =
+                extractor.extractToDirectory(pdfPath, imageDir, opts);
+
+            // Directory must exist
+            java.io.File dir = new java.io.File(imageDir);
+            if (!dir.exists() || !dir.isDirectory())
+                throw new AssertionError("Output directory was not created: " + imageDir);
+
+            // Each image must have a corresponding file on disk with correct size
+            for (com.pdfcreator.extractor.ExtractedImage img : images) {
+                java.io.File f = new java.io.File(imageDir + img.getSuggestedName());
+                if (!f.exists())
+                    throw new AssertionError("Expected file not found: " + f.getPath());
+                if (f.length() != img.getSizeBytes())
+                    throw new AssertionError(String.format(
+                        "File size mismatch for %s: expected %d, got %d",
+                        f.getName(), img.getSizeBytes(), f.length()));
+            }
+
+            System.out.printf("      %d image(s) saved to %s%n", images.size(), imageDir);
         });
     }
 

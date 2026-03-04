@@ -1,6 +1,8 @@
 package com.pdfcreator.extractor;
 
 import java.io.IOException;
+import java.io.File;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -41,7 +43,8 @@ import java.util.Map;
  */
 public class PdfExtractorCli {
 
-    private final PdfTextExtractor extractor = new PdfTextExtractor();
+    private final PdfTextExtractor  extractor      = new PdfTextExtractor();
+    private final PdfImageExtractor  imageExtractor = new PdfImageExtractor();
 
     /**
      * Entry point called from PdfCreator.main() when --extract flag is detected.
@@ -50,7 +53,51 @@ public class PdfExtractorCli {
      * @throws IOException if the PDF cannot be read or output file cannot be written
      */
     public void run(String[] args) throws IOException {
+        if (hasFlag(args, "--extract-images")) {
+            runImageExtraction(args);
+        } else {
+            runTextExtraction(args);
+        }
+    }
 
+    /** Handles --extract-images mode — saves images to a directory. */
+    private void runImageExtraction(String[] args) throws IOException {
+
+        // ---- IMAGE EXTRACTION ----
+        String inputPath = getArg(args, "--input", null);
+        if (inputPath == null) {
+            System.err.println("Error: --extract-images requires --input <pdf-path>");
+            System.exit(1);
+        }
+
+        String outputDir = getArg(args, "--output-dir", "extracted-images/");
+        String imgFmt    = getArg(args, "--img-format", "png");
+        int minW         = intArg(args, "--min-width",  10);
+        int minH         = intArg(args, "--min-height", 10);
+        int startPage    = intArg(args, "--start-page", -1);
+        int endPage      = intArg(args, "--end-page",   -1);
+
+        ImageExtractionOptions opts = new ImageExtractionOptions.Builder()
+            .startPage(startPage)
+            .endPage(endPage)
+            .minWidth(minW)
+            .minHeight(minH)
+            .preferredFormat(imgFmt)
+            .build();
+
+        System.out.printf("Mode       : extract-images%n");
+        System.out.printf("Input      : %s%n", inputPath);
+        System.out.printf("Output dir : %s%n", outputDir);
+        System.out.printf("Options    : %s%n%n", opts);
+
+        List<ExtractedImage> images =
+            imageExtractor.extractToDirectory(inputPath, outputDir, opts);
+
+        printImageSummary(images, outputDir);
+    }
+
+    /** Handles --extract (text) mode. */
+    private void runTextExtraction(String[] args) throws IOException {
         String inputPath  = getArg(args, "--input",  null);
         String outputPath = getArg(args, "--output", null);
 
@@ -91,6 +138,25 @@ public class PdfExtractorCli {
     // -----------------------------------------------------------------------
     // Private
     // -----------------------------------------------------------------------
+
+    private void printImageSummary(List<ExtractedImage> images, String outputDir) {
+        System.out.println();
+        System.out.println("=".repeat(55));
+        System.out.println("  Image extraction complete");
+        System.out.println("=".repeat(55));
+        System.out.printf("  Images found : %d%n", images.size());
+        if (!images.isEmpty()) {
+            System.out.printf("  Output dir   : %s%n", outputDir);
+            int totalBytes = images.stream().mapToInt(ExtractedImage::getSizeBytes).sum();
+            System.out.printf("  Total size   : %,d bytes%n", totalBytes);
+            System.out.println("  Files:");
+            for (ExtractedImage img : images)
+                System.out.printf("    %s  (%dx%d, %,d bytes)%n",
+                    img.getSuggestedName(), img.getWidth(),
+                    img.getHeight(), img.getSizeBytes());
+        }
+        System.out.println("=".repeat(55));
+    }
 
     private void printSummary(ExtractionResult result, String outputPath) {
         System.out.println();
