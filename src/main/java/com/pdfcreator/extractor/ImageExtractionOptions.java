@@ -64,6 +64,13 @@ public class ImageExtractionOptions {
      */
     private final boolean skipSoftMasks;
 
+    /**
+     * Password to open the PDF. Null means no password (unprotected document).
+     * If the PDF is encrypted and this is null or wrong, extraction throws
+     * PasswordRequiredException.
+     */
+    private final String password;
+
     private ImageExtractionOptions(Builder b) {
         this.startPage       = b.startPage;
         this.endPage         = b.endPage;
@@ -71,6 +78,7 @@ public class ImageExtractionOptions {
         this.minHeight       = b.minHeight;
         this.preferredFormat = b.preferredFormat;
         this.skipSoftMasks   = b.skipSoftMasks;
+        this.password        = b.password;
     }
 
     public int     getStartPage()       { return startPage; }
@@ -80,6 +88,12 @@ public class ImageExtractionOptions {
     public String  getPreferredFormat() { return preferredFormat; }
     public boolean isSkipSoftMasks()    { return skipSoftMasks; }
 
+    /**
+     * Password for encrypted PDFs. Null for unprotected documents.
+     * PDFBox tries this as both user password and owner password.
+     */
+    public String getPassword() { return password; }
+
     /** Default preset — all pages, 10px minimum, PNG, soft-masks skipped. */
     public static ImageExtractionOptions defaults() {
         return new Builder().build();
@@ -88,10 +102,11 @@ public class ImageExtractionOptions {
     @Override
     public String toString() {
         return String.format(
-            "ImageExtractionOptions[pages=%s-%s, minSize=%dx%d, format=%s, skipSoftMasks=%b]",
+            "ImageExtractionOptions[pages=%s-%s, minSize=%dx%d, format=%s, skipSoftMasks=%b, password=%s]",
             startPage < 0 ? "first" : startPage,
             endPage   < 0 ? "last"  : endPage,
-            minWidth, minHeight, preferredFormat, skipSoftMasks);
+            minWidth, minHeight, preferredFormat, skipSoftMasks,
+            password != null ? "***" : "none");
     }
 
     // -----------------------------------------------------------------------
@@ -105,6 +120,7 @@ public class ImageExtractionOptions {
         private int    minHeight       = 10;
         private String preferredFormat = "png";
         private boolean skipSoftMasks  = true;
+        private String  password        = null;
 
         /** First page to scan, 1-based (default: 1). */
         public Builder startPage(int v)         { this.startPage       = v; return this; }
@@ -123,6 +139,9 @@ public class ImageExtractionOptions {
 
         /** Skip PDFBox soft-mask artefact images (default: true). */
         public Builder skipSoftMasks(boolean v) { this.skipSoftMasks   = v; return this; }
+
+        /** Password for encrypted PDFs (user or owner password). Null = no password. */
+        public Builder password(String v) { this.password = v; return this; }
 
         public ImageExtractionOptions build() { return new ImageExtractionOptions(this); }
     }

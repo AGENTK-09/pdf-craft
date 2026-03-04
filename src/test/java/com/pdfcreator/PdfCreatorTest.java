@@ -90,6 +90,8 @@ public class PdfCreatorTest {
         test19_extractImages_fromGeneratedPdf();
         test20_extractImages_minSizeFilter();
         test21_extractImages_toDirectory();
+        test22_extract_passwordProtected();
+        test23_extract_wrongPassword();
 
         // ── Summary ────────────────────────────────────────────────────────
         System.out.println();
@@ -697,6 +699,123 @@ public class PdfCreatorTest {
             }
 
             System.out.printf("      %d image(s) saved to %s%n", images.size(), imageDir);
+        });
+    }
+
+
+    // -----------------------------------------------------------------------
+    // TEST 22 — Password-protected PDF: successful extraction with correct password
+    //
+    //           Generates a password-protected PDF using PDFBox encryption API,
+    //           then extracts text from it using the correct password.
+    //           Verifies: extracted text is non-empty and contains expected content.
+    // -----------------------------------------------------------------------
+    static void test22_extract_passwordProtected() {
+        run("22 Extract — password-protected PDF (correct password)", () -> {
+            String protectedPdf = OUT_DIR + "/22-password-protected.pdf";
+            String testPassword = "test1234";
+            String secretText   = "This is secret content inside a protected PDF.";
+
+            // ---- Step 1: Generate a password-protected PDF ----
+            // We use PDFBox directly to create and encrypt a PDF with a known password.
+            org.apache.pdfbox.pdmodel.PDDocument doc = new org.apache.pdfbox.pdmodel.PDDocument();
+            org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage();
+            doc.addPage(page);
+
+            try (org.apache.pdfbox.pdmodel.PDPageContentStream cs =
+                    new org.apache.pdfbox.pdmodel.PDPageContentStream(doc, page)) {
+                cs.beginText();
+                cs.setFont(new org.apache.pdfbox.pdmodel.font.PDType1Font(
+                    org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName.HELVETICA), 12);
+                cs.newLineAtOffset(50, 700);
+                cs.showText(secretText);
+                cs.endText();
+            }
+
+            // Apply Standard 128-bit encryption
+            org.apache.pdfbox.pdmodel.encryption.AccessPermission perms =
+                new org.apache.pdfbox.pdmodel.encryption.AccessPermission();
+            org.apache.pdfbox.pdmodel.encryption.StandardProtectionPolicy policy =
+                new org.apache.pdfbox.pdmodel.encryption.StandardProtectionPolicy(
+                    testPassword,   // owner password
+                    testPassword,   // user password  (same for simplicity)
+                    perms);
+            policy.setEncryptionKeyLength(128);
+            doc.protect(policy);
+            doc.save(protectedPdf);
+            doc.close();
+
+            assertFileValid(protectedPdf);
+
+            // ---- Step 2: Extract text with correct password ----
+            com.pdfcreator.extractor.ExtractionOptions opts =
+                new com.pdfcreator.extractor.ExtractionOptions.Builder()
+                    .password(testPassword)
+                    .build();
+
+            com.pdfcreator.extractor.PdfTextExtractor extractor =
+                new com.pdfcreator.extractor.PdfTextExtractor();
+            com.pdfcreator.extractor.ExtractionResult result =
+                extractor.extract(protectedPdf, opts);
+
+            // Extracted text must contain the secret content
+            if (!result.getText().contains("secret content"))
+                throw new AssertionError(
+                    "Expected secret content in extracted text, got: " + result.getText());
+
+            System.out.printf("      extracted %d words from password-protected PDF%n",
+                result.getWordCount());
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 23 — Password-protected PDF: PasswordRequiredException on wrong/no password
+    //
+    //           Uses the protected PDF from test 22. Attempts extraction with:
+    //           (a) no password — expects PasswordRequiredException, passwordProvided=false
+    //           (b) wrong password — expects PasswordRequiredException, passwordProvided=true
+    // -----------------------------------------------------------------------
+    static void test23_extract_wrongPassword() {
+        run("23 Extract — password-protected PDF (wrong/no password)", () -> {
+            String protectedPdf = OUT_DIR + "/22-password-protected.pdf";
+
+            // Ensure the protected PDF exists (run test22 first if needed)
+            if (!new java.io.File(protectedPdf).exists()) {
+                test22_extract_passwordProtected();
+            }
+
+            com.pdfcreator.extractor.PdfTextExtractor extractor =
+                new com.pdfcreator.extractor.PdfTextExtractor();
+
+            // ---- Part A: No password supplied ----
+            boolean caughtNoPassword = false;
+            try {
+                extractor.extract(protectedPdf);   // no password
+            } catch (com.pdfcreator.extractor.PasswordRequiredException e) {
+                caughtNoPassword = true;
+                if (e.wasPasswordProvided())
+                    throw new AssertionError(
+                        "wasPasswordProvided() should be false when no password given");
+                System.out.printf("      Part A OK — no password: %s%n", e.getMessage());
+            }
+            if (!caughtNoPassword)
+                throw new AssertionError(
+                    "Expected PasswordRequiredException when no password supplied");
+
+            // ---- Part B: Wrong password supplied ----
+            boolean caughtWrongPassword = false;
+            try {
+                extractor.extract(protectedPdf, "wrongpassword");
+            } catch (com.pdfcreator.extractor.PasswordRequiredException e) {
+                caughtWrongPassword = true;
+                if (!e.wasPasswordProvided())
+                    throw new AssertionError(
+                        "wasPasswordProvided() should be true when wrong password given");
+                System.out.printf("      Part B OK — wrong password: %s%n", e.getMessage());
+            }
+            if (!caughtWrongPassword)
+                throw new AssertionError(
+                    "Expected PasswordRequiredException when wrong password supplied");
         });
     }
 

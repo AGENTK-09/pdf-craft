@@ -198,6 +198,7 @@ public class PdfCreator {
               --strip-whitespace       Collapse whitespace into single space
               --no-metadata            Suppress metadata header block
               --no-per-page            Print flat text without page separators
+              --password <pwd>         Password for encrypted PDFs
 
             EXTRACT MODE (images):
               --extract-images
@@ -208,6 +209,7 @@ public class PdfCreator {
               --min-height <n>         Skip images shorter than N pixels (default: 10)
               --start-page <n>         First page to scan, 1-based (default: 1)
               --end-page <n>           Last page to scan, 1-based (default: last)
+              --password <pwd>         Password for encrypted PDFs
 
             SHARED OPTIONS:
               --template-file <path>   Template definitions (default: templates/pdf-templates.json)

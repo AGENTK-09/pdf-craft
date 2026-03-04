@@ -1,6 +1,7 @@
 package com.pdfcreator.extractor;
 
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +39,7 @@ public class ExtractionResult {
     private final int                 wordCount;
     private final int                 charCount;
     private final String              sourcePath;
+    private final List<ExtractedImage> images;      // populated by image extraction; empty if not requested
 
     private ExtractionResult(Builder b) {
         this.text       = b.text;
@@ -48,6 +50,7 @@ public class ExtractionResult {
                           : b.text.trim().split("\\s+").length;
         this.charCount  = b.text == null ? 0 : b.text.length();
         this.sourcePath = b.sourcePath;
+        this.images     = Collections.unmodifiableList(b.images);
     }
 
     /** Full concatenated extracted text. Never null. */
@@ -78,13 +81,19 @@ public class ExtractionResult {
     /** Path of the PDF file that was extracted. */
     public String getSourcePath() { return sourcePath; }
 
+    /**
+     * Images extracted from the PDF.
+     * Empty list if image extraction was not requested or no images were found.
+     */
+    public List<ExtractedImage> getImages() { return images; }
+
     /** Returns a compact summary suitable for logging. */
     @Override
     public String toString() {
         return String.format(
-            "ExtractionResult[source=%s, pages=%d, extracted=%d, words=%d, chars=%d, metadataFields=%d]",
+            "ExtractionResult[source=%s, pages=%d, extracted=%d, words=%d, chars=%d, metadataFields=%d, images=%d]",
             sourcePath, pageCount, pageTexts.isEmpty() ? -1 : pageTexts.size(),
-            wordCount, charCount, metadata.size());
+            wordCount, charCount, metadata.size(), images.size());
     }
 
     // -----------------------------------------------------------------------
@@ -97,12 +106,14 @@ public class ExtractionResult {
         private Map<String, String> metadata   = Map.of();
         private int                 pageCount  = 0;
         private String              sourcePath = "";
+        private List<ExtractedImage> images    = new ArrayList<>();
 
         public Builder text(String v)                    { this.text       = v;    return this; }
         public Builder pageTexts(List<String> v)         { this.pageTexts  = v;    return this; }
         public Builder metadata(Map<String, String> v)   { this.metadata   = v;    return this; }
         public Builder pageCount(int v)                  { this.pageCount  = v;    return this; }
         public Builder sourcePath(String v)              { this.sourcePath = v;    return this; }
+        public Builder images(List<ExtractedImage> v)     { this.images     = v;    return this; }
 
         public ExtractionResult build() { return new ExtractionResult(this); }
     }

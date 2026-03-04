@@ -1,9 +1,10 @@
 package com.pdfcreator.extractor;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.pdfbox.Loader;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,7 +54,7 @@ import java.util.logging.Logger;
  *   extractor.extractToFile("report.pdf", "report.txt", ExtractionOptions.defaults());
  *
  *   // Programmatic API — extract from a PDDocument already in memory
- *   try (PDDocument doc = PDDocument.load(new File("report.pdf"))) {
+ *   try (PDDocument doc = Loader.loadPDF(new File("report.pdf"), password.getBytes())) {
  *       ExtractionResult result = extractor.extract(doc, "report.pdf", opts);
  *   }
  */
@@ -78,6 +79,19 @@ public class PdfTextExtractor {
     }
 
     /**
+     * Extracts text from a password-protected PDF using default options.
+     * Convenience overload — equivalent to extract(path, new Builder().password(password).build()).
+     *
+     * @param pdfPath  path to the PDF file
+     * @param password user or owner password; null for unprotected PDFs
+     * @throws PasswordRequiredException if the password is null or incorrect
+     * @throws IOException if the file cannot be read
+     */
+    public ExtractionResult extract(String pdfPath, String password) throws IOException {
+        return extract(pdfPath, new ExtractionOptions.Builder().password(password).build());
+    }
+
+    /**
      * Extracts text from the given PDF file using the provided options.
      *
      * @param pdfPath path to the PDF file
@@ -94,8 +108,8 @@ public class PdfTextExtractor {
 
         logger.info("Extracting: " + pdfPath + " | " + options);
 
-        try (PDDocument document = Loader.loadPDF(file)) {
-            return extract(document, pdfPath, options); 
+        try (PDDocument document = loadWithPassword(file, pdfPath, options.getPassword())) {
+            return extract(document, pdfPath, options);
         }
     }
 
@@ -290,6 +304,47 @@ public class PdfTextExtractor {
             sb.append(trimmed).append("\n");
         }
         return sb.toString();
+    }
+
+    // -----------------------------------------------------------------------
+    // Password-aware PDF loader
+    // -----------------------------------------------------------------------
+
+    /**
+     * Loads a PDDocument with optional password support.
+     *
+     * PDFBox 3.x API:
+     *   Loader.loadPDF(File)                  — no password
+     *   Loader.loadPDF(File, byte[])          — with password bytes
+     *
+     * PDFBox tries the supplied bytes first as the user password, then as
+     * the owner password. Both grant content extraction access.
+     *
+     * If no password is supplied and the document is encrypted,
+     * PDFBox attempts to open it with an empty password (some PDFs allow this).
+     * If that fails, InvalidPasswordException is thrown.
+     *
+     * @throws PasswordRequiredException wrapping the underlying InvalidPasswordException
+     */
+    private static PDDocument loadWithPassword(File file, String pdfPath,
+                                               String password) throws IOException {
+        try {
+            if (password != null && !password.isEmpty()) {                                
+                return Loader.loadPDF(file, password);
+            } else {
+                PDDocument doc = Loader.loadPDF(file);
+                // PDFBox may open encrypted PDFs with an empty owner password.
+                // Verify that content extraction is actually permitted.
+                if (doc.isEncrypted() &&
+                    !doc.getCurrentAccessPermission().canExtractContent()) {
+                    doc.close();
+                    throw new PasswordRequiredException(pdfPath, false);
+                }
+                return doc;
+            }
+        } catch (InvalidPasswordException e) {
+            throw new PasswordRequiredException(pdfPath, password != null, e);
+        }
     }
 
     private static String capitalise(String s) {

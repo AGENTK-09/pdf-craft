@@ -3,6 +3,7 @@ package com.pdfcreator.extractor;
 import java.io.IOException;
 import java.io.File;
 import java.util.List;
+import com.pdfcreator.extractor.PasswordRequiredException;
 import java.util.Map;
 
 /**
@@ -77,12 +78,15 @@ public class PdfExtractorCli {
         int startPage    = intArg(args, "--start-page", -1);
         int endPage      = intArg(args, "--end-page",   -1);
 
+        String imgPassword = getArg(args, "--password", null);
+
         ImageExtractionOptions opts = new ImageExtractionOptions.Builder()
             .startPage(startPage)
             .endPage(endPage)
             .minWidth(minW)
             .minHeight(minH)
             .preferredFormat(imgFmt)
+            .password(imgPassword)
             .build();
 
         System.out.printf("Mode       : extract-images%n");
@@ -90,8 +94,18 @@ public class PdfExtractorCli {
         System.out.printf("Output dir : %s%n", outputDir);
         System.out.printf("Options    : %s%n%n", opts);
 
-        List<ExtractedImage> images =
-            imageExtractor.extractToDirectory(inputPath, outputDir, opts);
+        List<ExtractedImage> images;
+        try {
+            images = imageExtractor.extractToDirectory(inputPath, outputDir, opts);
+        } catch (PasswordRequiredException e) {
+            System.err.println();
+            System.err.println("Error: " + e.getMessage());
+            System.err.println(e.wasPasswordProvided()
+                ? "  Hint: the supplied password is incorrect."
+                : "  Hint: use --password <password> to supply the PDF password.");
+            System.exit(1);
+            return;
+        }
 
         printImageSummary(images, outputDir);
     }
@@ -107,6 +121,8 @@ public class PdfExtractorCli {
             System.exit(1);
         }
 
+        String txtPassword = getArg(args, "--password", null);
+
         ExtractionOptions options = new ExtractionOptions.Builder()
             .startPage(intArg(args, "--start-page", -1))
             .endPage(intArg(args, "--end-page",   -1))
@@ -114,6 +130,7 @@ public class PdfExtractorCli {
             .stripExtraWhitespace(hasFlag(args, "--strip-whitespace"))
             .includeMetadata(!hasFlag(args, "--no-metadata"))
             .extractPerPage(!hasFlag(args, "--no-per-page"))
+            .password(txtPassword)
             .build();
 
         System.out.printf("Mode    : extract%n");
@@ -123,13 +140,21 @@ public class PdfExtractorCli {
 
         ExtractionResult result;
 
-        if (outputPath != null) {
-            // Extract and write to file
-            result = extractor.extractToFile(inputPath, outputPath, options);
-        } else {
-            // Extract and print to stdout
-            result = extractor.extract(inputPath, options);
-            extractor.printResult(result);
+        try {
+            if (outputPath != null) {
+                result = extractor.extractToFile(inputPath, outputPath, options);
+            } else {
+                result = extractor.extract(inputPath, options);
+                extractor.printResult(result);
+            }
+        } catch (PasswordRequiredException e) {
+            System.err.println();
+            System.err.println("Error: " + e.getMessage());
+            System.err.println(e.wasPasswordProvided()
+                ? "  Hint: the supplied password is incorrect."
+                : "  Hint: use --password <password> to supply the PDF password.");
+            System.exit(1);
+            return;
         }
 
         printSummary(result, outputPath);

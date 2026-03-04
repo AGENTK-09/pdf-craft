@@ -57,6 +57,14 @@ public class ExtractionOptions {
      */
     private final boolean extractPerPage;
 
+    /**
+     * Password to open the PDF. Null means no password (unprotected document).
+     * Passed as the owner or user password — PDFBox tries both.
+     * If the PDF is encrypted and this is null or wrong, extraction throws
+     * PasswordRequiredException.
+     */
+    private final String password;
+
     private ExtractionOptions(Builder b) {
         this.startPage            = b.startPage;
         this.endPage              = b.endPage;
@@ -64,6 +72,7 @@ public class ExtractionOptions {
         this.stripExtraWhitespace = b.stripExtraWhitespace;
         this.includeMetadata      = b.includeMetadata;
         this.extractPerPage       = b.extractPerPage;
+        this.password             = b.password;
     }
 
     public int     getStartPage()            { return startPage; }
@@ -73,16 +82,23 @@ public class ExtractionOptions {
     public boolean isIncludeMetadata()       { return includeMetadata; }
     public boolean isExtractPerPage()        { return extractPerPage; }
 
+    /**
+     * Password for encrypted PDFs. Null for unprotected documents.
+     * PDFBox tries this as both user password and owner password.
+     */
+    public String getPassword() { return password; }
+
     /** Default preset — extracts all pages, sorting on, metadata on, per-page on. */
     public static ExtractionOptions defaults() { return new Builder().build(); }
 
     @Override
     public String toString() {
         return String.format(
-            "ExtractionOptions[pages=%s-%s, sort=%b, stripWS=%b, metadata=%b, perPage=%b]",
+            "ExtractionOptions[pages=%s-%s, sort=%b, stripWS=%b, metadata=%b, perPage=%b, password=%s]",
             startPage < 0 ? "first" : startPage,
             endPage   < 0 ? "last"  : endPage,
-            sortByPosition, stripExtraWhitespace, includeMetadata, extractPerPage);
+            sortByPosition, stripExtraWhitespace, includeMetadata, extractPerPage,
+            password != null ? "***" : "none");
     }
 
     // -----------------------------------------------------------------------
@@ -96,6 +112,7 @@ public class ExtractionOptions {
         private boolean stripExtraWhitespace = false;
         private boolean includeMetadata      = true;
         private boolean extractPerPage       = true;
+        private String  password             = null;
 
         public Builder startPage(int v)                { this.startPage = v;            return this; }
         public Builder endPage(int v)                  { this.endPage = v;              return this; }
@@ -103,6 +120,9 @@ public class ExtractionOptions {
         public Builder stripExtraWhitespace(boolean v) { this.stripExtraWhitespace = v; return this; }
         public Builder includeMetadata(boolean v)      { this.includeMetadata = v;      return this; }
         public Builder extractPerPage(boolean v)       { this.extractPerPage = v;       return this; }
+
+        /** Password for encrypted PDFs (user or owner password). Null = no password. */
+        public Builder password(String v)              { this.password = v;            return this; }
 
         public ExtractionOptions build() { return new ExtractionOptions(this); }
     }

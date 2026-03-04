@@ -1,6 +1,7 @@
 package com.pdfcreator.extractor;
 
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -63,7 +64,7 @@ import java.util.logging.Logger;
  *   extractor.extractToDirectory("report.pdf", "output/images/", opts);
  *
  *   // Programmatic — extract from an already-open PDDocument
- *   try (PDDocument doc = Loader.loadPDF(new File("report.pdf"))) {
+ *   try (PDDocument doc = Loader.loadPDF(new File("report.pdf"), password.getBytes())) {
  *       List<ExtractedImage> images = extractor.extract(doc, "report.pdf", opts);
  *   }
  */
@@ -87,6 +88,19 @@ public class PdfImageExtractor {
     }
 
     /**
+     * Extracts images from a password-protected PDF using default options.
+     * Convenience overload — equivalent to extract(path, new Builder().password(password).build()).
+     *
+     * @param pdfPath  path to the PDF file
+     * @param password user or owner password; null for unprotected PDFs
+     * @throws PasswordRequiredException if the password is null or incorrect
+     * @throws IOException if the file cannot be read
+     */
+    public List<ExtractedImage> extract(String pdfPath, String password) throws IOException {
+        return extract(pdfPath, new ImageExtractionOptions.Builder().password(password).build());
+    }
+
+    /**
      * Extracts images from the given PDF using the provided options.
      *
      * @param pdfPath path to the source PDF file
@@ -102,7 +116,7 @@ public class PdfImageExtractor {
 
         logger.info("Extracting images: " + pdfPath + " | " + options);
 
-        try (PDDocument document = Loader.loadPDF(file)) {
+        try (PDDocument document = loadWithPassword(file, pdfPath, options.getPassword())) {
             return extract(document, pdfPath, options);
         }
     }
@@ -186,6 +200,35 @@ public class PdfImageExtractor {
 
         System.out.printf("Saved %d image(s) to: %s%n", images.size(), outputDir);
         return images;
+    }
+
+    // -----------------------------------------------------------------------
+    // Password-aware PDF loader
+    // -----------------------------------------------------------------------
+
+    /**
+     * Loads a PDDocument with optional password support.
+     * Uses the same logic as PdfTextExtractor.loadWithPassword().
+     *
+     * @throws PasswordRequiredException if password is wrong or missing for an encrypted PDF
+     */
+    private static PDDocument loadWithPassword(File file, String pdfPath,
+                                               String password) throws IOException {
+        try {
+            if (password != null && !password.isEmpty()) {
+                return Loader.loadPDF(file, password);
+            } else {
+                PDDocument doc = Loader.loadPDF(file);
+                if (doc.isEncrypted() &&
+                    !doc.getCurrentAccessPermission().canExtractContent()) {
+                    doc.close();
+                    throw new PasswordRequiredException(pdfPath, false);
+                }
+                return doc;
+            }
+        } catch (InvalidPasswordException e) {
+            throw new PasswordRequiredException(pdfPath, password != null, e);
+        }
     }
 
     // -----------------------------------------------------------------------
