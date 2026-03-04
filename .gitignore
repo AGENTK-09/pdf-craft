@@ -25,5 +25,5 @@ replay_pid*
 
 # Custom Directorys 
 output/*
-input/*
+inputs/*
 extracted-images/*

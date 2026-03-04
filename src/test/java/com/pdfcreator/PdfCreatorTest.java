@@ -2,6 +2,7 @@ package com.pdfcreator;
 
 import com.pdfcreator.batch.*;
 import com.pdfcreator.extractor.*;
+import com.pdfcreator.manipulator.*;
 import com.pdfcreator.datasource.*;
 import com.pdfcreator.pipeline.RenderPipeline;
 
@@ -92,6 +93,10 @@ public class PdfCreatorTest {
         test21_extractImages_toDirectory();
         test22_extract_passwordProtected();
         test23_extract_wrongPassword();
+        test24_merge_basicThreeFiles();
+        test25_merge_withPasswordProtected();
+        test26_split_everyNPages();
+        test27_split_intoParts();
 
         // ── Summary ────────────────────────────────────────────────────────
         System.out.println();
@@ -816,6 +821,170 @@ public class PdfCreatorTest {
             if (!caughtWrongPassword)
                 throw new AssertionError(
                     "Expected PasswordRequiredException when wrong password supplied");
+        });
+    }
+
+
+    // -----------------------------------------------------------------------
+    // TEST 24 — Merge: combine three generated PDFs into one
+    //           Generates 3 single-page PDFs, merges them, verifies the output
+    //           has 3 pages and the file exists.
+    // -----------------------------------------------------------------------
+    static void test24_merge_basicThreeFiles() {
+        run("24 Merge — three PDFs into one", () -> {
+            // Generate 3 source PDFs using direct mode
+            String[] sources = {
+                OUT_DIR + "/24-source-a.pdf",
+                OUT_DIR + "/24-source-b.pdf",
+                OUT_DIR + "/24-source-c.pdf"
+            };
+            String[] texts = { "Document A content.", "Document B content.", "Document C content." };
+
+            for (int i = 0; i < sources.length; i++) {
+                PdfCreator.main(new String[]{
+                    "--title",  "Source " + (char)('A' + i),
+                    "--text",   texts[i],
+                    "--output", sources[i]
+                });
+                assertFileValid(sources[i]);
+            }
+
+            String mergedPath = OUT_DIR + "/24-merged.pdf";
+            MergeOptions opts = new MergeOptions.Builder()
+                .addInput(sources[0])
+                .addInput(sources[1])
+                .addInput(sources[2])
+                .output(mergedPath)
+                .copyMetadataFromFirst(true)
+                .build();
+
+            new PdfManipulator().merge(opts);
+            assertFileValid(mergedPath);
+
+            // Verify page count = 3
+            try (org.apache.pdfbox.pdmodel.PDDocument doc =
+                    org.apache.pdfbox.Loader.loadPDF(new java.io.File(mergedPath))) {
+                assertEquals("Merged PDF should have 3 pages", 3, doc.getNumberOfPages());
+            }
+
+            System.out.printf("      merged 3 files -> %s%n", mergedPath);
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 25 — Merge: one plain + one password-protected input
+    //           Uses the protected PDF from test 22. Merges it with a plain PDF.
+    //           Verifies: output exists, page count = 2, no exception thrown.
+    // -----------------------------------------------------------------------
+    static void test25_merge_withPasswordProtected() {
+        run("25 Merge — plain + password-protected input", () -> {
+            String plainPdf     = OUT_DIR + "/24-source-a.pdf";
+            String protectedPdf = OUT_DIR + "/22-password-protected.pdf";
+
+            // Ensure both source files exist
+            if (!new java.io.File(plainPdf).exists())
+                test24_merge_basicThreeFiles();
+            if (!new java.io.File(protectedPdf).exists())
+                test22_extract_passwordProtected();
+
+            String mergedPath = OUT_DIR + "/25-merged-with-protected.pdf";
+            MergeOptions opts = new MergeOptions.Builder()
+                .addInput(plainPdf)
+                .addInput(protectedPdf, "test1234")   // correct password
+                .output(mergedPath)
+                .build();
+
+            new PdfManipulator().merge(opts);
+            assertFileValid(mergedPath);
+
+            try (org.apache.pdfbox.pdmodel.PDDocument doc =
+                    org.apache.pdfbox.Loader.loadPDF(new java.io.File(mergedPath))) {
+                assertEquals("Merged PDF should have 2 pages", 2, doc.getNumberOfPages());
+            }
+
+            System.out.printf("      merged plain + protected -> %s%n", mergedPath);
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 26 — Split: every N pages
+    //           Generates a 6-page PDF, splits every 2 pages, verifies 3 output
+    //           files each containing exactly 2 pages.
+    // -----------------------------------------------------------------------
+    static void test26_split_everyNPages() {
+        run("26 Split — every 2 pages (6-page source)", () -> {
+            // Build a 6-page source by merging 6 single-page PDFs
+            String[] pages = new String[6];
+            for (int i = 0; i < 6; i++) {
+                pages[i] = OUT_DIR + "/26-page" + (i + 1) + ".pdf";
+                PdfCreator.main(new String[]{
+                    "--text",   "Page " + (i + 1) + " of the split test document.",
+                    "--output", pages[i]
+                });
+            }
+
+            MergeOptions mergeOpts = new MergeOptions.Builder()
+                .addInput(pages[0]).addInput(pages[1]).addInput(pages[2])
+                .addInput(pages[3]).addInput(pages[4]).addInput(pages[5])
+                .output(OUT_DIR + "/26-source-6pages.pdf")
+                .build();
+            new PdfManipulator().merge(mergeOpts);
+
+            String splitDir = OUT_DIR + "/26-split-output/";
+            SplitOptions splitOpts = new SplitOptions.Builder(
+                    OUT_DIR + "/26-source-6pages.pdf", splitDir)
+                .everyNPages(2)
+                .build();
+
+            SplitResult result = new PdfManipulator().split(splitOpts);
+
+            assertEquals("Should produce 3 output files", 3, result.getOutputCount());
+            for (int i = 0; i < result.getOutputCount(); i++) {
+                assertFileValid(result.getOutputPaths().get(i));
+                assertEquals("Each part should have 2 pages", 2,
+                    (int) result.getPageCounts().get(i));
+            }
+
+            System.out.printf("      split into %d files%n", result.getOutputCount());
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 27 — Split: into N parts + page-range strategy
+    //           Uses the 6-page source from test 26. Tests both INTO_N_PARTS
+    //           (3 parts → 2 pages each) and BY_PAGE_RANGE (explicit boundaries).
+    // -----------------------------------------------------------------------
+    static void test27_split_intoParts() {
+        run("27 Split — into 3 parts + explicit page ranges", () -> {
+            String sourcePdf = OUT_DIR + "/26-source-6pages.pdf";
+            if (!new java.io.File(sourcePdf).exists())
+                test26_split_everyNPages();
+
+            // ---- Part A: INTO_N_PARTS ----
+            SplitOptions partsOpts = new SplitOptions.Builder(sourcePdf, OUT_DIR + "/27-parts/")
+                .intoParts(3)
+                .build();
+
+            SplitResult partsResult = new PdfManipulator().split(partsOpts);
+            assertEquals("Should produce 3 parts", 3, partsResult.getOutputCount());
+            assertEquals("Total pages should be 6", 6, partsResult.getTotalPagesProcessed());
+            for (String outPath : partsResult.getOutputPaths())
+                assertFileValid(outPath);
+            System.out.printf("      intoParts(3): %d files%n", partsResult.getOutputCount());
+
+            // ---- Part B: BY_PAGE_RANGE (explicit) ----
+            SplitOptions rangeOpts = new SplitOptions.Builder(sourcePdf, OUT_DIR + "/27-ranges/")
+                .byPageRanges(new int[][]{ {1, 2}, {3, 4}, {5, 6} })
+                .build();
+
+            SplitResult rangeResult = new PdfManipulator().split(rangeOpts);
+            assertEquals("Should produce 3 range files", 3, rangeResult.getOutputCount());
+            for (int i = 0; i < rangeResult.getOutputCount(); i++) {
+                assertFileValid(rangeResult.getOutputPaths().get(i));
+                assertEquals("Each range should have 2 pages", 2,
+                    (int) rangeResult.getPageCounts().get(i));
+            }
+            System.out.printf("      byPageRanges: %d files%n", rangeResult.getOutputCount());
         });
     }
 

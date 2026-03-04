@@ -9,6 +9,7 @@ import com.pdfcreator.pipeline.RenderPipeline;
 import com.pdfcreator.renderer.SectionRendererRegistry;
 import com.pdfcreator.service.ConfigService;
 import com.pdfcreator.extractor.PdfExtractorCli;
+import com.pdfcreator.manipulator.PdfManipulatorCli;
 import com.pdfcreator.template.DocumentMetadata;
 import com.pdfcreator.template.TemplateSection;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -46,8 +47,13 @@ public class PdfCreator {
 
         if (hasFlag(args, "--extract") || hasFlag(args, "--extract-images")) {
             // ---- EXTRACT / EXTRACT-IMAGES MODE ----
-            // PdfExtractorCli.run() dispatches internally based on which flag is present
             new PdfExtractorCli().run(args);
+            return;
+        }
+
+        if (hasFlag(args, "--merge") || hasFlag(args, "--split")) {
+            // ---- MERGE / SPLIT MODE ----
+            new PdfManipulatorCli().run(args);
             return;
         }
 
@@ -211,6 +217,23 @@ public class PdfCreator {
               --end-page <n>           Last page to scan, 1-based (default: last)
               --password <pwd>         Password for encrypted PDFs
 
+            MERGE MODE:
+              --merge
+              --inputs <p1,p2,...>     Comma-separated PDF paths to merge (required, min 2)
+              --output <path>          Output PDF path (default: merged.pdf)
+              --passwords <pw1,pw2,..> Passwords aligned with --inputs (use empty for none)
+              --no-copy-meta           Do not copy metadata from the first input
+
+            SPLIT MODE:
+              --split
+              --input <path>           PDF to split (required)
+              --output-dir <path>      Directory for output files (default: split-output/)
+              --password <pwd>         Password if source PDF is encrypted
+              --prefix <name>          Filename prefix (default: stem of input filename)
+              --every-n-pages <n>      One output file per N pages
+              --into-parts <n>         Divide into N roughly equal parts
+              --page-ranges <ranges>   Explicit ranges, e.g. "1-3,4-6,7-10"
+
             SHARED OPTIONS:
               --template-file <path>   Template definitions (default: templates/pdf-templates.json)
               --config-file <path>     Config presets (default: configs/pdf-configs.json)
@@ -240,6 +263,27 @@ public class PdfCreator {
                 --output-dir output/images/ \\
                 --img-format jpg --min-width 100 --min-height 100 \\
                 --start-page 1 --end-page 3
+
+              # Merge three PDFs into one
+              java -jar pdf-creator.jar --merge \\
+                --inputs jan.pdf,feb.pdf,mar.pdf --output q1.pdf
+
+              # Merge with a password-protected input
+              java -jar pdf-creator.jar --merge \\
+                --inputs open.pdf,secret.pdf --passwords ,mypassword \\
+                --output merged.pdf
+
+              # Split into chunks of 5 pages
+              java -jar pdf-creator.jar --split \\
+                --input report.pdf --every-n-pages 5 --output-dir split/
+
+              # Split into 4 equal parts
+              java -jar pdf-creator.jar --split \\
+                --input report.pdf --into-parts 4 --output-dir split/
+
+              # Split at explicit page boundaries
+              java -jar pdf-creator.jar --split \\
+                --input report.pdf --page-ranges "1-3,4-6,7-10" --output-dir split/
 
               # Single bank statement
               java -jar pdf-creator.jar \\
