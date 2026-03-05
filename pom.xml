@@ -10,17 +10,28 @@
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.release>21</maven.compiler.release>        
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <pdfbox.version>3.0.2</pdfbox.version>
     </properties>
 
     <dependencies>
-        <!-- Apache PDFBox -->
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
             <version>${pdfbox.version}</version>
+        </dependency>
+
+        <!--
+            BouncyCastle — required for AES-128 and AES-256 encryption in PDFBox 3.x.
+            Without this, PDFBox falls back to RC4 even when key length 256 is requested.
+            RC4 encryption (40-bit or 128-bit) works without this dependency.
+        -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
         </dependency>
     </dependencies>
 
@@ -34,9 +45,7 @@
                 <executions>
                     <execution>
                         <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
+                        <goals><goal>shade</goal></goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <filters>
@@ -55,6 +64,26 @@
                                 </transformer>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Include test sources in the fat JAR so PdfCreatorTest is runnable -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <executions>
+                    <execution>
+                        <id>compile-tests</id>
+                        <phase>compile</phase>
+                        <goals><goal>compile</goal></goals>
+                        <configuration>
+                            <compileSourceRoots>
+                                <compileSourceRoot>${project.basedir}/src/main/java</compileSourceRoot>
+                                <compileSourceRoot>${project.basedir}/src/test/java</compileSourceRoot>
+                            </compileSourceRoots>
                         </configuration>
                     </execution>
                 </executions>

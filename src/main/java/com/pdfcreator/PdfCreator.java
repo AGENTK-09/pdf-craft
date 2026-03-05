@@ -11,6 +11,7 @@ import com.pdfcreator.service.ConfigService;
 import com.pdfcreator.extractor.PdfExtractorCli;
 import com.pdfcreator.manipulator.PdfManipulatorCli;
 import com.pdfcreator.printer.PdfPrinterCli;
+import com.pdfcreator.security.PdfSecurityCli;
 import com.pdfcreator.template.DocumentMetadata;
 import com.pdfcreator.template.TemplateSection;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -61,6 +62,16 @@ public class PdfCreator {
         if (hasFlag(args, "--print") || hasFlag(args, "--list-printers")) {
             // ---- PRINT / LIST-PRINTERS MODE ----
             new PdfPrinterCli().run(args);
+            return;
+        }
+
+        if (hasFlag(args, "--encrypt")
+         || hasFlag(args, "--decrypt")
+         || hasFlag(args, "--change-password")
+         || hasFlag(args, "--update-permissions")
+         || hasFlag(args, "--inspect-security")) {
+            // ---- SECURITY MODE ----
+            new PdfSecurityCli().run(args);
             return;
         }
 
@@ -240,6 +251,48 @@ public class PdfCreator {
               --every-n-pages <n>      One output file per N pages
               --into-parts <n>         Divide into N roughly equal parts
               --page-ranges <ranges>   Explicit ranges, e.g. "1-3,4-6,7-10"
+
+            ENCRYPT MODE:
+              --encrypt
+              --input <path>           Source PDF (required)
+              --output <path>          Encrypted output PDF (required)
+              --owner-password <pwd>   Owner password — full access (required)
+              --user-password <pwd>    User password — to open the file (default: "" = no prompt)
+              --preset <n>             all-allowed | read-only | print-only | no-copy
+              --deny-print             Deny full-resolution printing
+              --deny-copy              Deny copying text/graphics
+              --deny-modify            Deny modifying document content
+              --deny-annotations       Deny editing annotations and form fields
+              --deny-fill-forms        Deny filling in existing form fields
+              --deny-accessibility     Deny text extraction for assistive tech
+              --deny-assemble          Deny inserting/deleting/rotating pages
+
+            DECRYPT MODE:
+              --decrypt
+              --input <path>           Encrypted source PDF (required)
+              --output <path>          Plain output PDF (required)
+              --owner-password <pwd>   Owner password (required)
+
+            CHANGE PASSWORD MODE:
+              --change-password
+              --input <path>           Encrypted source PDF (required)
+              --output <path>          Re-encrypted output PDF (required)
+              --owner-password <pwd>   Current owner password (required)
+              --new-owner-password <p> New owner password
+              --new-user-password <p>  New user password (default: "" if omitted)
+
+            UPDATE PERMISSIONS MODE:
+              --update-permissions
+              --input <path>           Encrypted source PDF (required)
+              --output <path>          Re-encrypted output PDF (required)
+              --owner-password <pwd>   Owner password (required)
+              --preset <n>             Preset permission set (see ENCRYPT MODE)
+              --deny-*                 Individual deny flags (see ENCRYPT MODE)
+
+            INSPECT SECURITY MODE:
+              --inspect-security
+              --input <path>           PDF to inspect (required)
+              --owner-password <pwd>   Password if PDF is encrypted (optional for plain PDFs)
 
             PRINT MODE:
               --print

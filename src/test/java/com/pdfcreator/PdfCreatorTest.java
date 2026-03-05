@@ -4,6 +4,7 @@ import com.pdfcreator.batch.*;
 import com.pdfcreator.extractor.*;
 import com.pdfcreator.manipulator.*;
 import com.pdfcreator.printer.*;
+import com.pdfcreator.security.*;
 import com.pdfcreator.datasource.*;
 import com.pdfcreator.pipeline.RenderPipeline;
 
@@ -69,6 +70,7 @@ public class PdfCreatorTest {
         Files.createDirectories(Path.of(OUT_DIR));
         Files.createDirectories(Path.of(OUT_DIR + "/batch-statements"));
         Files.createDirectories(Path.of(OUT_DIR + "/batch-notifications"));
+        Files.createDirectories(Path.of(OUT_DIR + "/security"));
 
         // ── Run all tests ──────────────────────────────────────────────────
         test01_directMode_inlineText();
@@ -100,6 +102,12 @@ public class PdfCreatorTest {
         test27_split_intoParts();
         test28_printer_listAndOptions();
         test29_printer_silentPrint();
+        test30_security_encrypt_allPermissions();
+        test31_security_encrypt_readOnlyPreset();
+        test32_security_decrypt();
+        test33_security_updatePermissions();
+        test34_security_changePassword();
+        test35_security_inspect();
 
         // ── Summary ────────────────────────────────────────────────────────
         System.out.println();
@@ -1125,6 +1133,315 @@ public class PdfCreatorTest {
                         + e.getMessage(), e);
                 }
             }
+        });
+    }
+
+
+    // -----------------------------------------------------------------------
+    // TEST 30 — Encrypt: AES-256, all permissions, both passwords
+    //           Verifies the output is encrypted and can be opened with the
+    //           correct user password but not with the wrong password.
+    // -----------------------------------------------------------------------
+    static void test30_security_encrypt_allPermissions() {
+        run("30 Security — encrypt AES-256 all-permissions", () -> {
+            String source  = OUT_DIR + "/01-direct-inline.pdf";
+            String output  = OUT_DIR + "/security/30-encrypted-all.pdf";
+            String ownerPw = "owner1234";
+            String userPw  = "user1234";
+
+            // Generate source if not already present
+            if (!new java.io.File(source).exists()) {
+                PdfCreator.main(new String[]{
+                    "--title", "Security Test Source",
+                    "--text",  "Confidential content for encryption test.",
+                    "--output", source
+                });
+            }
+            assertFileValid(source);
+
+            PdfSecurityManager mgr = new PdfSecurityManager();
+            EncryptionOptions opts = new EncryptionOptions.Builder(EncryptionOptions.Operation.ENCRYPT)
+                .inputPath(source)
+                .outputPath(output)
+                .ownerPassword(ownerPw)
+                .userPassword(userPw)
+                .permissions(PdfPermissions.allAllowed())
+                .build();
+
+            SecurityResult result = mgr.execute(opts);
+
+            assertFileValid(output);
+
+            // Verify it's actually encrypted
+            if (!result.isEncrypted())
+                throw new AssertionError("SecurityResult.isEncrypted() should be true");
+            if (!result.getAlgorithm().equals("AES-256"))
+                throw new AssertionError("Expected AES-256, got: " + result.getAlgorithm());
+            if (result.getKeyLengthBits() != 256)
+                throw new AssertionError("Expected 256-bit key, got: " + result.getKeyLengthBits());
+
+            // Verify opening with wrong password throws PasswordRequiredException
+            boolean caughtWrongPwd = false;
+            try {
+                new com.pdfcreator.extractor.PdfTextExtractor().extract(output, "wrongpassword");
+            } catch (PasswordRequiredException e) {
+                caughtWrongPwd = true;
+            }
+            if (!caughtWrongPwd)
+                throw new AssertionError("Expected PasswordRequiredException for wrong password");
+
+            // Verify opening with correct user password succeeds
+            com.pdfcreator.extractor.ExtractionResult extracted =
+                new com.pdfcreator.extractor.PdfTextExtractor().extract(output, userPw);
+            if (!extracted.getText().contains("Confidential"))
+                throw new AssertionError("Expected encrypted content to be extractable with user password");
+
+            System.out.printf("      Encrypted: %s, algo=%s, key=%d bits%n",
+                output, result.getAlgorithm(), result.getKeyLengthBits());
+            System.out.printf("      Permissions: %s%n", result.getPermissions());
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 31 — Encrypt: read-only preset, empty user password (opens freely)
+    //           Verifies the canCopy() and canModify() flags are false on output.
+    // -----------------------------------------------------------------------
+    static void test31_security_encrypt_readOnlyPreset() {
+        run("31 Security — encrypt read-only preset (empty user password)", () -> {
+            String source  = OUT_DIR + "/01-direct-inline.pdf";
+            String output  = OUT_DIR + "/security/31-encrypted-readonly.pdf";
+            String ownerPw = "ownerReadOnly";
+
+            if (!new java.io.File(source).exists()) {
+                PdfCreator.main(new String[]{
+                    "--title", "Read-Only Test",
+                    "--text", "This document is read-only protected.",
+                    "--output", source
+                });
+            }
+            assertFileValid(source);
+
+            PdfSecurityManager mgr = new PdfSecurityManager();
+            EncryptionOptions opts = new EncryptionOptions.Builder(EncryptionOptions.Operation.ENCRYPT)
+                .inputPath(source)
+                .outputPath(output)
+                .ownerPassword(ownerPw)
+                .userPassword("")              // opens freely without password prompt
+                .permissions(PdfPermissions.readOnly())
+                .build();
+
+            SecurityResult result = mgr.execute(opts);
+            assertFileValid(output);
+
+            if (!result.isEncrypted())
+                throw new AssertionError("Expected output to be encrypted");
+
+            PdfPermissions perms = result.getPermissions();
+            if (perms.canCopy())
+                throw new AssertionError("Expected canCopy=false for read-only preset");
+            if (perms.canModify())
+                throw new AssertionError("Expected canModify=false for read-only preset");
+            if (!perms.canPrint())
+                throw new AssertionError("Expected canPrint=true for read-only preset");
+            if (!perms.canAccessibility())
+                throw new AssertionError("Expected canAccessibility=true for read-only preset");
+
+            // Verify we can open it without a password (empty user password)
+            com.pdfcreator.extractor.ExtractionResult extracted =
+                new com.pdfcreator.extractor.PdfTextExtractor().extract(output);
+            if (extracted.getText().isBlank())
+                throw new AssertionError("Expected non-blank text from freely-opening encrypted PDF");
+
+            System.out.printf("      Read-only PDF opens without password.%n");
+            System.out.printf("      copy=%b, modify=%b, print=%b, access=%b%n",
+                perms.canCopy(), perms.canModify(), perms.canPrint(), perms.canAccessibility());
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 32 — Decrypt: remove encryption from an AES-256 PDF
+    //           Uses the encrypted PDF from test 30. Verifies the output is
+    //           not encrypted and can be read without a password.
+    // -----------------------------------------------------------------------
+    static void test32_security_decrypt() {
+        run("32 Security — decrypt AES-256 PDF", () -> {
+            String encrypted = OUT_DIR + "/security/30-encrypted-all.pdf";
+            String output    = OUT_DIR + "/security/32-decrypted.pdf";
+            String ownerPw   = "owner1234";
+
+            // Ensure encrypted source exists
+            if (!new java.io.File(encrypted).exists()) {
+                test30_security_encrypt_allPermissions();
+            }
+            assertFileValid(encrypted);
+
+            PdfSecurityManager mgr = new PdfSecurityManager();
+            EncryptionOptions opts = new EncryptionOptions.Builder(EncryptionOptions.Operation.DECRYPT)
+                .inputPath(encrypted)
+                .outputPath(output)
+                .ownerPassword(ownerPw)
+                .build();
+
+            SecurityResult result = mgr.execute(opts);
+            assertFileValid(output);
+
+            if (result.isEncrypted())
+                throw new AssertionError("Expected decrypted output to be unencrypted");
+
+            // Verify the plain output opens without any password
+            com.pdfcreator.extractor.ExtractionResult extracted =
+                new com.pdfcreator.extractor.PdfTextExtractor().extract(output);
+            if (!extracted.getText().contains("Confidential"))
+                throw new AssertionError("Expected decrypted content to be readable without password");
+
+            System.out.printf("      Decrypted successfully. File readable without password.%n");
+            System.out.printf("      Output size: %,d bytes%n", result.getOutputSizeBytes());
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 33 — Update permissions: change read-only to print-only on an
+    //           already-encrypted PDF. Verifies accessibility flag changes.
+    // -----------------------------------------------------------------------
+    static void test33_security_updatePermissions() {
+        run("33 Security — update permissions (read-only → print-only)", () -> {
+            String encrypted = OUT_DIR + "/security/31-encrypted-readonly.pdf";
+            String output    = OUT_DIR + "/security/33-updated-perms.pdf";
+            String ownerPw   = "ownerReadOnly";
+
+            if (!new java.io.File(encrypted).exists()) {
+                test31_security_encrypt_readOnlyPreset();
+            }
+            assertFileValid(encrypted);
+
+            PdfSecurityManager mgr = new PdfSecurityManager();
+            EncryptionOptions opts = new EncryptionOptions.Builder(EncryptionOptions.Operation.UPDATE_PERMISSIONS)
+                .inputPath(encrypted)
+                .outputPath(output)
+                .ownerPassword(ownerPw)
+                .permissions(PdfPermissions.printOnly())
+                .build();
+
+            SecurityResult result = mgr.execute(opts);
+            assertFileValid(output);
+
+            PdfPermissions perms = result.getPermissions();
+            if (perms.canCopy())
+                throw new AssertionError("Expected canCopy=false after print-only update");
+            if (perms.canAccessibility())
+                throw new AssertionError("Expected canAccessibility=false for print-only preset");
+            if (!perms.canPrint())
+                throw new AssertionError("Expected canPrint=true for print-only preset");
+
+            System.out.printf("      Permissions updated. print=%b, copy=%b, access=%b%n",
+                perms.canPrint(), perms.canCopy(), perms.canAccessibility());
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 34 — Change password: update both owner and user passwords
+    //           Uses test 30 output. Verifies old password is rejected and
+    //           new password grants access.
+    // -----------------------------------------------------------------------
+    static void test34_security_changePassword() {
+        run("34 Security — change owner and user passwords", () -> {
+            String encrypted   = OUT_DIR + "/security/30-encrypted-all.pdf";
+            String output      = OUT_DIR + "/security/34-changed-pwd.pdf";
+            String currentOwner = "owner1234";
+            String newOwner    = "newOwner5678";
+            String newUser     = "newUser5678";
+
+            if (!new java.io.File(encrypted).exists()) {
+                test30_security_encrypt_allPermissions();
+            }
+            assertFileValid(encrypted);
+
+            PdfSecurityManager mgr = new PdfSecurityManager();
+            EncryptionOptions opts = new EncryptionOptions.Builder(EncryptionOptions.Operation.CHANGE_PASSWORD)
+                .inputPath(encrypted)
+                .outputPath(output)
+                .ownerPassword(currentOwner)
+                .newOwnerPassword(newOwner)
+                .newUserPassword(newUser)
+                .build();
+
+            SecurityResult result = mgr.execute(opts);
+            assertFileValid(output);
+
+            // Old user password should now be rejected
+            boolean oldRejected = false;
+            try {
+                new com.pdfcreator.extractor.PdfTextExtractor().extract(output, "user1234");
+            } catch (PasswordRequiredException e) {
+                oldRejected = true;
+                System.out.printf("      Old password correctly rejected: %s%n", e.getMessage());
+            }
+            if (!oldRejected)
+                throw new AssertionError("Expected old password to be rejected after change");
+
+            // New user password should succeed
+            com.pdfcreator.extractor.ExtractionResult extracted =
+                new com.pdfcreator.extractor.PdfTextExtractor().extract(output, newUser);
+            if (extracted.getText().isBlank())
+                throw new AssertionError("Expected content to be readable with new user password");
+
+            System.out.printf("      Password changed. New credentials work correctly.%n");
+            System.out.printf("      Output size: %,d bytes%n", result.getOutputSizeBytes());
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 35 — Inspect: verify security status on plain and encrypted PDFs
+    // -----------------------------------------------------------------------
+    static void test35_security_inspect() {
+        run("35 Security — inspect plain and encrypted PDFs", () -> {
+            String plainPdf     = OUT_DIR + "/01-direct-inline.pdf";
+            String encryptedPdf = OUT_DIR + "/security/30-encrypted-all.pdf";
+            String ownerPw      = "owner1234";
+
+            if (!new java.io.File(plainPdf).exists()) {
+                PdfCreator.main(new String[]{
+                    "--title", "Inspect Test",
+                    "--text", "Plain PDF for security inspection.",
+                    "--output", plainPdf
+                });
+            }
+            if (!new java.io.File(encryptedPdf).exists()) {
+                test30_security_encrypt_allPermissions();
+            }
+            assertFileValid(plainPdf);
+            assertFileValid(encryptedPdf);
+
+            PdfSecurityManager mgr = new PdfSecurityManager();
+
+            // ---- Inspect plain PDF ----
+            EncryptionOptions plainOpts = new EncryptionOptions.Builder(EncryptionOptions.Operation.INSPECT)
+                .inputPath(plainPdf)
+                .build();
+            SecurityResult plainResult = mgr.execute(plainOpts);
+
+            if (plainResult.isEncrypted())
+                throw new AssertionError("Plain PDF should not be reported as encrypted");
+            System.out.printf("      Plain PDF: encrypted=%b, algo=%s%n",
+                plainResult.isEncrypted(), plainResult.getAlgorithm());
+
+            // ---- Inspect encrypted PDF with owner password ----
+            EncryptionOptions encOpts = new EncryptionOptions.Builder(EncryptionOptions.Operation.INSPECT)
+                .inputPath(encryptedPdf)
+                .ownerPassword(ownerPw)
+                .build();
+            SecurityResult encResult = mgr.execute(encOpts);
+
+            if (!encResult.isEncrypted())
+                throw new AssertionError("Encrypted PDF should be reported as encrypted");
+            if (!encResult.getAlgorithm().equals("AES-256"))
+                throw new AssertionError("Expected AES-256, got: " + encResult.getAlgorithm());
+            if (encResult.getKeyLengthBits() != 256)
+                throw new AssertionError("Expected 256-bit key, got: " + encResult.getKeyLengthBits());
+
+            System.out.printf("      Encrypted PDF: encrypted=%b, algo=%s, key=%d bits%n",
+                encResult.isEncrypted(), encResult.getAlgorithm(), encResult.getKeyLengthBits());
+            System.out.printf("      Permissions: %s%n", encResult.getPermissions());
         });
     }
 
