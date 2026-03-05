@@ -3,6 +3,7 @@ package com.pdfcreator;
 import com.pdfcreator.batch.*;
 import com.pdfcreator.extractor.*;
 import com.pdfcreator.manipulator.*;
+import com.pdfcreator.printer.*;
 import com.pdfcreator.datasource.*;
 import com.pdfcreator.pipeline.RenderPipeline;
 
@@ -97,6 +98,8 @@ public class PdfCreatorTest {
         test25_merge_withPasswordProtected();
         test26_split_everyNPages();
         test27_split_intoParts();
+        test28_printer_listAndOptions();
+        test29_printer_silentPrint();
 
         // ── Summary ────────────────────────────────────────────────────────
         System.out.println();
@@ -985,6 +988,143 @@ public class PdfCreatorTest {
                     (int) rangeResult.getPageCounts().get(i));
             }
             System.out.printf("      byPageRanges: %d files%n", rangeResult.getOutputCount());
+        });
+    }
+
+
+    // -----------------------------------------------------------------------
+    // TEST 28 — Printer: listPrinters() and PrintOptions builder
+    //
+    //   (a) listPrinters() returns a non-null List (may be empty in CI headless env)
+    //   (b) getDefaultPrinterName() returns null or a non-blank string
+    //   (c) PrintOptions.Builder validates correctly — illegal args throw
+    //   (d) A fully-specified PrintOptions builds without error
+    // -----------------------------------------------------------------------
+    static void test28_printer_listAndOptions() {
+        run("28 Printer — listPrinters() and PrintOptions builder", () -> {
+
+            PdfPrinter printer = new PdfPrinter();
+
+            // (a) listPrinters() must return non-null
+            java.util.List<String> printers = printer.listPrinters();
+            if (printers == null)
+                throw new AssertionError("listPrinters() returned null");
+            System.out.printf("      printers found: %d%n", printers.size());
+            for (String name : printers)
+                System.out.printf("        - %s%n", name);
+
+            // (b) default printer name is null or non-blank
+            String defName = printer.getDefaultPrinterName();
+            if (defName != null && defName.isBlank())
+                throw new AssertionError(
+                    "getDefaultPrinterName() returned blank string");
+            System.out.printf("      default printer: %s%n",
+                defName != null ? defName : "(none configured)");
+
+            // (c) PrintOptions builder rejects copies < 1
+            boolean caughtBadCopies = false;
+            try {
+                new PrintOptions.Builder("report.pdf").copies(0).build();
+            } catch (IllegalStateException e) {
+                caughtBadCopies = true;
+            }
+            if (!caughtBadCopies)
+                throw new AssertionError(
+                    "Expected IllegalStateException for copies=0");
+
+            // (d) PrintOptions builder rejects blank pdfPath
+            boolean caughtBlankPath = false;
+            try {
+                new PrintOptions.Builder("").build();
+            } catch (IllegalStateException e) {
+                caughtBlankPath = true;
+            }
+            if (!caughtBlankPath)
+                throw new AssertionError(
+                    "Expected IllegalStateException for blank pdfPath");
+
+            // (e) Valid full-spec builds without error and toString() is non-blank
+            String pdfPath = OUT_DIR + "/04-bank-statement-cust001.pdf";
+            PrintOptions opts = new PrintOptions.Builder(pdfPath)
+                .printerName("TestPrinter")
+                .startPage(1).endPage(2)
+                .copies(2)
+                .sides(PrintOptions.Sides.DUPLEX_LONG_EDGE)
+                .scaling(PrintOptions.ScalingMode.SHRINK)
+                .silent(true)
+                .jobName("TestJob")
+                .build();
+
+            if (opts.toString().isBlank())
+                throw new AssertionError("PrintOptions.toString() is blank");
+            assertEquals("copies", 2, opts.getCopies());
+            assertEquals("startPage", 1, opts.getStartPage());
+            assertEquals("endPage", 2, opts.getEndPage());
+            assertEquals("sides", PrintOptions.Sides.DUPLEX_LONG_EDGE, opts.getSides());
+            assertEquals("scaling", PrintOptions.ScalingMode.SHRINK, opts.getScaling());
+            assertEquals("silent", true, opts.isSilent());
+            assertEquals("jobName", "TestJob", opts.getJobName());
+            System.out.printf("      PrintOptions built OK: %s%n", opts);
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // TEST 29 — Printer: silent print attempt (graceful no-printer handling)
+    //
+    //   In a headless / CI environment there is typically no printer configured.
+    //   This test verifies that:
+    //   (a) When a printer IS available: the print job is submitted without error
+    //   (b) When NO printer is available: PrinterException is thrown with a
+    //       clear message rather than a NullPointerException or silent failure
+    //
+    //   The test passes in BOTH cases — what it guards against is an unhandled
+    //   crash (NPE, ClassCastException, etc.) during printer resolution.
+    // -----------------------------------------------------------------------
+    static void test29_printer_silentPrint() {
+        run("29 Printer — silent print (graceful no-printer handling)", () -> {
+
+            // Generate a small source PDF if not already present
+            String pdfPath = OUT_DIR + "/04-bank-statement-cust001.pdf";
+            if (!new java.io.File(pdfPath).exists()) {
+                PdfCreator.main(new String[]{
+                    "--template-id", "bank-statement",
+                    "--data-file",   DATA_DIR + "/statements/CUST-001.json",
+                    "--output",      pdfPath
+                });
+            }
+            assertFileValid(pdfPath);
+
+            PdfPrinter printer = new PdfPrinter();
+            PrintOptions opts = new PrintOptions.Builder(pdfPath)
+                .silent(true)
+                .startPage(1).endPage(1)   // only 1 page to minimise spool time
+                .build();
+
+            boolean hasPrinter = printer.getDefaultPrinterName() != null;
+
+            try {
+                printer.print(opts);
+                if (hasPrinter) {
+                    System.out.println("      Print job submitted to: "
+                        + printer.getDefaultPrinterName());
+                } else {
+                    // If no printer but no exception — unexpected, but not fatal
+                    System.out.println("      print() returned without exception " +
+                        "(no printer configured — OS may have silently discarded job)");
+                }
+            } catch (java.awt.print.PrinterException e) {
+                // PrinterException is the correct, expected failure when no printer
+                // is configured. Anything else (NPE, ClassCastException) would
+                // propagate up and fail the test.
+                System.out.printf("      No printer available — caught expected " +
+                    "PrinterException: %s%n", e.getMessage());
+                if (hasPrinter) {
+                    // We thought there was a printer — rethrow as a real failure
+                    throw new AssertionError(
+                        "PrinterException despite default printer being configured: "
+                        + e.getMessage(), e);
+                }
+            }
         });
     }
 

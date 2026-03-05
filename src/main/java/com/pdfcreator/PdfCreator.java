@@ -10,6 +10,7 @@ import com.pdfcreator.renderer.SectionRendererRegistry;
 import com.pdfcreator.service.ConfigService;
 import com.pdfcreator.extractor.PdfExtractorCli;
 import com.pdfcreator.manipulator.PdfManipulatorCli;
+import com.pdfcreator.printer.PdfPrinterCli;
 import com.pdfcreator.template.DocumentMetadata;
 import com.pdfcreator.template.TemplateSection;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -54,6 +55,12 @@ public class PdfCreator {
         if (hasFlag(args, "--merge") || hasFlag(args, "--split")) {
             // ---- MERGE / SPLIT MODE ----
             new PdfManipulatorCli().run(args);
+            return;
+        }
+
+        if (hasFlag(args, "--print") || hasFlag(args, "--list-printers")) {
+            // ---- PRINT / LIST-PRINTERS MODE ----
+            new PdfPrinterCli().run(args);
             return;
         }
 
@@ -234,6 +241,21 @@ public class PdfCreator {
               --into-parts <n>         Divide into N roughly equal parts
               --page-ranges <ranges>   Explicit ranges, e.g. "1-3,4-6,7-10"
 
+            PRINT MODE:
+              --print
+              --input <path>           PDF file to print (required)
+              --printer <n>         Printer name (default: system default)
+              --start-page <n>         First page to print, 1-based (default: 1)
+              --end-page <n>           Last page to print, 1-based (default: last)
+              --copies <n>             Number of copies (default: 1)
+              --sides <mode>           simplex | duplex-long | duplex-short
+              --scaling <mode>         fit | shrink | actual (default: fit)
+              --silent                 Print without showing a dialog
+              --password <pwd>         Password for encrypted PDFs
+              --job-name <n>        Job name shown in OS print queue
+
+              --list-printers          List available printers and exit
+
             SHARED OPTIONS:
               --template-file <path>   Template definitions (default: templates/pdf-templates.json)
               --config-file <path>     Config presets (default: configs/pdf-configs.json)
@@ -284,6 +306,17 @@ public class PdfCreator {
               # Split at explicit page boundaries
               java -jar pdf-creator.jar --split \\
                 --input report.pdf --page-ranges "1-3,4-6,7-10" --output-dir split/
+
+              # List available printers
+              java -jar pdf-creator.jar --list-printers
+
+              # Print to default printer (shows dialog)
+              java -jar pdf-creator.jar --print --input report.pdf
+
+              # Print silently to a named printer, pages 1-3, duplex
+              java -jar pdf-creator.jar --print --input report.pdf \\
+                --printer "HP LaserJet 400" --silent \\
+                --start-page 1 --end-page 3 --sides duplex-long
 
               # Single bank statement
               java -jar pdf-creator.jar \\
