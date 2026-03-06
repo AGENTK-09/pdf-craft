@@ -33,6 +33,34 @@
             <artifactId>bcprov-jdk18on</artifactId>
             <version>1.78.1</version>
         </dependency>
+
+        <!--
+            BouncyCastle PKIX — required for CMS signing (CMSSignedDataGenerator,
+            JcaSignerInfoGeneratorBuilder), certificate chain validation (PKIXParameters,
+            CertPathBuilder), and RFC 3161 TSA timestamping (TimeStampRequestGenerator,
+            TimeStampToken). bcprov (above) provides the crypto primitives;
+            bcpkix provides the higher-level PKI/CMS layer.
+            Both must be the same version.
+        -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+
+        <!--
+            BouncyCastle Util — contains org.bouncycastle.asn1.cms.* (Attribute,
+            AttributeTable, CMSObjectIdentifiers etc.) used by PdfSigner when
+            embedding TSA timestamp tokens into SignerInfo unsigned attributes.
+            bcpkix depends on bcutil transitively, but Maven does not guarantee
+            transitive deps appear on the compile classpath, so we declare it
+            explicitly. Must be the same version as bcprov and bcpkix.
+        -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcutil-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
     </dependencies>
 
     <build>

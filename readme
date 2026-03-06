@@ -144,16 +144,100 @@ java -jar target/pdf-creator-1.0-SNAPSHOT.jar --split \
   --input report.pdf --page-ranges "1-3,4-6,7-10" --output-dir split/
 
 # Discover printers
-java -jar pdf-creator.jar --list-printers
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --list-printers
 
 # Print to default printer (shows dialog)
-java -jar pdf-creator.jar --print --input report.pdf
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --print --input report.pdf
 
 # Silent batch print to a named printer
-java -jar pdf-creator.jar --print --input report.pdf \
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --print --input report.pdf \
   --printer "HP LaserJet 400" --silent \
   --copies 2 --sides duplex-long --scaling shrink
 
 # Print pages 2–5 of a protected PDF
-java -jar pdf-creator.jar --print --input protected.pdf \
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --print --input protected.pdf \
   --password secret --start-page 2 --end-page 5 --silent
+
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --encrypt \
+    --input output/hello.pdf \
+    --output test-encrypted.pdf \
+    --owner-password "ownerSecret" \
+    --user-password "userSecret"
+
+# Expected: Error: PDF is password-protected and no password was supplied
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input output/test-encrypted.pdf
+
+# Encrypt with read-only preset (opens freely, no copy/modify)
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --encrypt \
+    --input output/hello.pdf \
+    --output test-readonly.pdf \
+    --owner-password "ownerSecret" \
+    --user-password "" \
+    --preset read-only
+
+# Verify it opens without any password:
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input test-readonly.pdf
+
+# Encrypt with custom deny flags
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --encrypt \
+    --input output/hello.pdf \
+    --output output/test-printonly.pdf \
+    --owner-password "ownerSecret" \
+    --deny-copy \
+    --deny-modify \
+    --deny-annotations \
+    --deny-fill-forms \
+    --deny-accessibility \
+    --deny-assemble
+
+# Inspect security status
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --inspect-security --input output/hello.pdf
+# Expected: Encrypted: NO
+
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --inspect-security \
+    --input output/test-printonly.pdf \
+    --owner-password "ownerSecret" \
+
+# Update permissions on an existing encrypted PDF
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --update-permissions \
+    --input output/test-encrypted.pdf \
+    --output output/test-updated-perms.pdf \
+    --owner-password "ownerSecret" \
+    --preset print-only
+
+# Inspect the Permissions 
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --inspect-security \
+    --input output/test-updated-perms.pdf \
+    --owner-password "ownerSecret"
+# Expected: Print: allowed, Accessibility: DENIED, Copy: DENIED
+
+# Change Password 
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --change-password \
+    --input output/test-encrypted.pdf \
+    --output output/test-newpwd.pdf \
+    --owner-password "ownerSecret" \
+    --new-owner-password "newOwner99" \
+    --new-user-password "newUser99"
+
+# Check if old password is rejected or not 
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input output/test-newpwd.pdf --password "userSecret"
+# Expected: Error: Incorrect password for PDF
+
+# Decrypt Pdf
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --decrypt \
+    --input output/test-encrypted.pdf \
+    --output output/test-decrypted.pdf \
+    --owner-password "ownerSecret"
+
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --inspect-security --input output/test-decrypted.pdf
+# Expected: Encrypted: NO
+
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input output/test-decrypted.pdf
+# Expected: text extracted with no password needed
+
+# Generate a test keystore (one time):
+keytool -genkeypair \
+  -storepass changeit -storetype PKCS12 -alias myorg \
+  -validity 365 -keyalg RSA -keysize 2048 \
+  -dname "CN=MyOrg Statements, O=MyOrg, L=Chennai, ST=TN, C=IN" \
+  -keystore myorg.p12

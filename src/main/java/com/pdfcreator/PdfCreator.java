@@ -12,9 +12,12 @@ import com.pdfcreator.extractor.PdfExtractorCli;
 import com.pdfcreator.manipulator.PdfManipulatorCli;
 import com.pdfcreator.printer.PdfPrinterCli;
 import com.pdfcreator.security.PdfSecurityCli;
+import com.pdfcreator.signature.PdfSignatureCli;
 import com.pdfcreator.template.DocumentMetadata;
 import com.pdfcreator.template.TemplateSection;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import java.security.Security;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 
 import java.util.*;
@@ -40,6 +43,13 @@ public class PdfCreator {
     private static final String DEFAULT_TEMPLATE_FILE = "templates/pdf-templates.json";
 
     public static void main(String[] args) throws Exception {
+        // Register BouncyCastle as a JCE security provider.
+        // Required for all CMS signing, TSA timestamping, and certificate chain
+        // operations. addProvider() is a no-op if BC is already registered.
+        if (Security.getProvider("BC") == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
+
         if (args.length == 0 || hasFlag(args, "--help")) { printHelp(); return; }
 
         String outputPath   = getArg(args, "--output",        DEFAULT_OUTPUT);
@@ -62,6 +72,15 @@ public class PdfCreator {
         if (hasFlag(args, "--print") || hasFlag(args, "--list-printers")) {
             // ---- PRINT / LIST-PRINTERS MODE ----
             new PdfPrinterCli().run(args);
+            return;
+        }
+
+        if (hasFlag(args, "--sign")
+         || hasFlag(args, "--verify")
+         || hasFlag(args, "--list-signatures")
+         || hasFlag(args, "--export-cert")) {
+            // ---- SIGNATURE MODE ----
+            new PdfSignatureCli().run(args);
             return;
         }
 
