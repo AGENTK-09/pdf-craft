@@ -241,3 +241,56 @@ keytool -genkeypair \
   -validity 365 -keyalg RSA -keysize 2048 \
   -dname "CN=MyOrg Statements, O=MyOrg, L=Chennai, ST=TN, C=IN" \
   -keystore myorg.p12
+
+# Sign a Statement 
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --sign \
+  --input output/out-single.pdf --output output/statement-signed.pdf \
+  --keystore myorg.p12 --keystore-password changeit \
+  --reason "Monthly Account Statement" --location "Chennai, India"
+
+# Verify the Signature 
+# With custom trust anchor (self-signed cert)
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --verify \
+  --input output/statement-signed.pdf --truststore myorg-public.cer
+
+# With JVM default trust (for commercially issued certs — no truststore needed)
+java -jar pdf-creator.jar --verify --input statement-signed.pdf
+
+# Export public cert to share with recipients:
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --export-cert \
+  --keystore myorg.p12 --keystore-password changeit --output myorg-public.cer
+
+# Batch generate + sign customer statements in one pass:
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --batch \
+  --template-id bank-statement \
+  --csv-file customers.csv \
+  --output-dir statements/ \
+  --threads 8 \
+  --keystore myorg.p12 --keystore-password changeit \
+  --reason "Monthly Account Statement - March 2026" \
+  --tsa-url http://timestamp.digicert.com
+
+# All pages → PNG at 150 DPI (default)
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --rasterize \
+    --input statement.pdf \
+    --output-dir statement-pages/
+
+# Print quality PNG at 300 DPI
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --rasterize \
+    --input statement.pdf \
+    --output-dir statement-pages/ \
+    --dpi 300
+
+# Pages 1-3 → JPEG at 200 DPI, 90% quality
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --rasterize \
+    --input output/out-compact.pdf \
+    --output-dir output/previews/ \
+    --format jpeg --dpi 200 --jpeg-quality 0.90 \
+    --start-page 1 --end-page 3
+
+# First page only as a thumbnail
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --rasterize \
+    --input output/out-multi.pdf \
+    --output-dir output/thumbnails/ \
+    --dpi 72 --start-page 1 --end-page 1 \
+    --file-prefix thumb

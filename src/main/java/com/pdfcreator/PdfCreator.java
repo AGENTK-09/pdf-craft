@@ -13,6 +13,7 @@ import com.pdfcreator.manipulator.PdfManipulatorCli;
 import com.pdfcreator.printer.PdfPrinterCli;
 import com.pdfcreator.security.PdfSecurityCli;
 import com.pdfcreator.signature.PdfSignatureCli;
+import com.pdfcreator.rasterizer.PdfRasterizerCli;
 import com.pdfcreator.template.DocumentMetadata;
 import com.pdfcreator.template.TemplateSection;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -56,6 +57,12 @@ public class PdfCreator {
         String configFile   = getArg(args, "--config-file",   DEFAULT_CONFIG_FILE);
         String templateFile = getArg(args, "--template-file", DEFAULT_TEMPLATE_FILE);
         String templateId   = getArg(args, "--template-id",   null);
+
+        if (hasFlag(args, "--rasterize")) {
+            // ---- RASTERIZE MODE ----
+            new PdfRasterizerCli().run(args);
+            return;
+        }
 
         if (hasFlag(args, "--extract") || hasFlag(args, "--extract-images")) {
             // ---- EXTRACT / EXTRACT-IMAGES MODE ----
