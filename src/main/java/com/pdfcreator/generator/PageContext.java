@@ -60,6 +60,7 @@ public class PageContext {
     }
 
     public PDPageContentStream getContentStream() { return contentStream; }
+    public PDPage              getCurrentPage()   { return currentPage; }
     public float  getYPos()         { return yPos; }
     public void   setYPos(float y)  { this.yPos = y; }
     public float  getUsableWidth()  { return pageSize.getWidth() - config.getMarginLeft() - config.getMarginRight(); }

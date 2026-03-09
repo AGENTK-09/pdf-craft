@@ -1,5 +1,6 @@
 package com.pdfcreator.renderer;
 
+import com.pdfcreator.forms.FormRenderer;
 import com.pdfcreator.template.TemplateSection;
 
 import java.util.EnumMap;
@@ -35,6 +36,7 @@ public class SectionRendererRegistry {
         renderers.put(TemplateSection.Type.SUMMARY,    new SummaryRenderer());
         // ColumnsRenderer gets a reference to this registry for recursive dispatch
         renderers.put(TemplateSection.Type.COLUMNS,    new ColumnsRenderer(this));
+        renderers.put(TemplateSection.Type.FORM,       new FormRenderer());
     }
 
     public SectionRenderer get(TemplateSection.Type type) {

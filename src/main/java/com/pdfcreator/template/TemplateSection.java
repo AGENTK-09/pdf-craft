@@ -25,7 +25,7 @@ public class TemplateSection {
 
     public enum Type {
         HEADING, SUBHEADING, BODY, DIVIDER, SPACER, IMAGE,
-        TABLE, SUMMARY, NOTICE, COLUMNS, PAGEBREAK;
+        TABLE, SUMMARY, NOTICE, COLUMNS, PAGEBREAK, FORM;
 
         public static Type fromString(String value) {
             if (value == null) throw new IllegalArgumentException("Section type cannot be null");
@@ -41,10 +41,11 @@ public class TemplateSection {
                 case "NOTICE"     -> NOTICE;
                 case "COLUMNS"    -> COLUMNS;
                 case "PAGEBREAK"  -> PAGEBREAK;
+                case "FORM"       -> FORM;
                 default -> throw new IllegalArgumentException(
                     "Unknown section type: '" + value + "'. Valid types: " +
                     "heading, subheading, body, divider, spacer, image, " +
-                    "table, summary, notice, columns, pagebreak");
+                    "table, summary, notice, columns, pagebreak, form");
             };
         }
     }
@@ -72,6 +73,9 @@ public class TemplateSection {
     // Columns layout
     private final ColumnsSection  columnsData;
 
+    // Form (AcroForm field definitions)
+    private final com.pdfcreator.forms.FormSection formData;
+
     private TemplateSection(Builder b) {
         this.type               = b.type;
         this.content            = b.content;
@@ -84,6 +88,7 @@ public class TemplateSection {
         this.repeatHeaderOnPage = b.repeatHeaderOnPage;
         this.bgColor            = b.bgColor;
         this.columnsData        = b.columnsData;
+        this.formData           = b.formData;
     }
 
     public Type           getType()               { return type; }
@@ -97,6 +102,7 @@ public class TemplateSection {
     public boolean        isRepeatHeaderOnPage()  { return repeatHeaderOnPage; }
     public String         getBgColor()            { return bgColor; }
     public ColumnsSection getColumnsData()        { return columnsData; }
+    public com.pdfcreator.forms.FormSection getFormData() { return formData; }
 
     public TemplateSection withContent(String resolvedContent) {
         return new Builder(this).content(resolvedContent).build();
@@ -129,6 +135,7 @@ public class TemplateSection {
         private boolean        repeatHeaderOnPage = true;
         private String         bgColor            = null;
         private ColumnsSection columnsData        = null;
+        private com.pdfcreator.forms.FormSection formData = null;
 
         public Builder(Type type)               { this.type = type; }
         public Builder(TemplateSection source)  {
@@ -143,6 +150,7 @@ public class TemplateSection {
             this.repeatHeaderOnPage = source.repeatHeaderOnPage;
             this.bgColor            = source.bgColor;
             this.columnsData        = source.columnsData;
+            this.formData           = source.formData;
         }
 
         public Builder content(String v)            { this.content = v; return this; }
@@ -155,6 +163,7 @@ public class TemplateSection {
         public Builder repeatHeaderOnPage(boolean v){ this.repeatHeaderOnPage = v; return this; }
         public Builder bgColor(String v)            { this.bgColor = v; return this; }
         public Builder columnsData(ColumnsSection v){ this.columnsData = v; return this; }
+        public Builder formData(com.pdfcreator.forms.FormSection v) { this.formData = v; return this; }
 
         public TemplateSection build() {
             if (type == null) throw new IllegalStateException("Section type is required");

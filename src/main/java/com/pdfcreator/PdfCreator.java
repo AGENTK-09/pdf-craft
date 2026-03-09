@@ -109,6 +109,14 @@ public class PdfCreator {
             return;
         }
 
+        if (hasFlag(args, "--generate-form")
+         || hasFlag(args, "--extract-form")
+         || hasFlag(args, "--fill-form")) {
+            // ---- ACROFORM MODE ----
+            new com.pdfcreator.forms.PdfFormCli().run(args);
+            return;
+        }
+
         if (hasFlag(args, "--batch")) {
             // ---- BATCH MODE ----
             if (templateId == null) {
@@ -330,6 +338,32 @@ public class PdfCreator {
               --inspect-security
               --input <path>           PDF to inspect (required)
               --owner-password <pwd>   Password if PDF is encrypted (optional for plain PDFs)
+
+            GENERATE FORM MODE:
+              --generate-form
+              --output <path>          Output PDF path (required)
+              --title <text>           Form title heading (default: "Form")
+              --config-id <id>         Style config preset (default: default)
+              --field <spec>           Field definition (repeatable, see format below)
+
+              Field spec format:  name=<n>,type=<t>[,label=<l>][,required][,readonly]
+                                  [,default=<v>][,options=<a|b|c>][,tooltip=<text>]
+                                  [,height=<pts>][,rows=<n>][,toggleSize=<pts>]
+              Field types:  text | multiline | checkbox | radio | combo | listbox
+
+            EXTRACT FORM MODE:
+              --extract-form
+              --input <path>           PDF with AcroForm to inspect (required)
+              --output <json-path>     Write field info to JSON file (default: stdout)
+              --password <pwd>         Password for encrypted PDFs (optional)
+
+            FILL FORM MODE:
+              --fill-form
+              --input <path>           PDF with AcroForm to fill (required)
+              --output <path>          Filled PDF output path (required)
+              --field "name=<n>,value=<v>"  Field value to set (repeatable)
+              --flatten                Flatten interactive fields after filling
+              --password <pwd>         Password for encrypted PDFs (optional)
 
             PRINT MODE:
               --print
