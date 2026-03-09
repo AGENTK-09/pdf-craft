@@ -64,7 +64,7 @@ import java.util.logging.Logger;
  *   extractor.extractToDirectory("report.pdf", "output/images/", opts);
  *
  *   // Programmatic — extract from an already-open PDDocument
- *   try (PDDocument doc = Loader.loadPDF(new File("report.pdf"), password)) {
+ *   try (PDDocument doc = Loader.loadPDF(new File("report.pdf"), password.getBytes())) {
  *       List<ExtractedImage> images = extractor.extract(doc, "report.pdf", opts);
  *   }
  */

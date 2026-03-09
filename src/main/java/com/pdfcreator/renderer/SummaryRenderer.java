@@ -2,13 +2,13 @@ package com.pdfcreator.renderer;
 
 import com.pdfcreator.config.PdfConfig;
 import com.pdfcreator.datasource.DocumentData;
+import com.pdfcreator.pdfa.FontLoader;
 import com.pdfcreator.generator.ColorUtil;
 import com.pdfcreator.generator.PageContext;
 import com.pdfcreator.template.TemplateSection;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.font.PDFont;
 
 import java.awt.Color;
 import java.io.IOException;
@@ -41,13 +41,14 @@ public class SummaryRenderer implements SectionRenderer {
 
     @Override
     public void render(TemplateSection section, PageContext ctx, PdfConfig config,
-                       DocumentData data, PDDocument document) throws IOException {
+                       DocumentData data, PDDocument document,
+                       FontLoader fontLoader) throws IOException {
 
         String content = section.getContent();
         if (content == null || content.isBlank()) return;
 
-        PDType1Font labelFont = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-        PDType1Font valueFont = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
+        PDFont labelFont = fontLoader.regularFor(config.getFontFamily());
+        PDFont valueFont = fontLoader.boldFor(config.getFontFamily());
         int fontSize  = config.getBodyFontSize();
         float rowH    = fontSize + (ROW_PADDING_V * 2);
         float usable  = ctx.getUsableWidth();

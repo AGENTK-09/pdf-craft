@@ -56,8 +56,9 @@ public class TemplateLoader {
         String description = flat.getOrDefault("description", "");
         String configId    = flat.getOrDefault("configId", "default");
 
-        PageHeader header = parseHeaderObject(extractNestedObject(objJson, "header"));
-        PageFooter footer = parseFooterObject(extractNestedObject(objJson, "footer"));
+        PageHeader       header   = parseHeaderObject(extractNestedObject(objJson, "header"));
+        PageFooter       footer   = parseFooterObject(extractNestedObject(objJson, "footer"));
+        DocumentMetadata metadata = parseMetadataObject(extractNestedObject(objJson, "metadata"));
 
         String sectionsRaw = extractArrayContent(objJson, "sections");
         List<TemplateSection> sections = sectionsRaw != null
@@ -65,8 +66,22 @@ public class TemplateLoader {
 
         return new PdfTemplate.Builder()
             .id(id).description(description).configId(configId)
-            .header(header).footer(footer).sections(sections)
+            .header(header).footer(footer).metadata(metadata).sections(sections)
             .build();
+    }
+
+    private DocumentMetadata parseMetadataObject(String json) {
+        if (json == null || json.isBlank()) return null;
+        Map<String, String> m = parseScalarFields(json);
+        if (m.isEmpty()) return null;
+        DocumentMetadata.Builder b = new DocumentMetadata.Builder();
+        if (m.containsKey("title"))    b.title(m.get("title"));
+        if (m.containsKey("author"))   b.author(m.get("author"));
+        if (m.containsKey("subject"))  b.subject(m.get("subject"));
+        if (m.containsKey("keywords")) b.keywords(m.get("keywords"));
+        if (m.containsKey("creator"))  b.creator(m.get("creator"));
+        if (m.containsKey("producer")) b.producer(m.get("producer"));
+        return b.build();
     }
 
     private PageHeader parseHeaderObject(String json) {

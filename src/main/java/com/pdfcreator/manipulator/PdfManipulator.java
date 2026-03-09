@@ -1,6 +1,7 @@
 package com.pdfcreator.manipulator;
 
 import com.pdfcreator.extractor.PasswordRequiredException;
+import com.pdfcreator.pdfa.PdfACompliance;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -144,6 +145,17 @@ public class PdfManipulator {
                 if (firstInfo.getKeywords() != null) info.setKeywords(firstInfo.getKeywords());
                 if (firstInfo.getCreator()  != null) info.setCreator(firstInfo.getCreator());
                 info.setProducer("PdfCreator / Apache PDFBox 3");
+            }
+
+            // If any source document was PDF/A, transfer compliance markers to the merged output
+            boolean anyPdfA = sourceDocs.stream().anyMatch(PdfACompliance::isPdfA);
+            if (anyPdfA) {
+                try {
+                    PdfACompliance.attach(destination);
+                    logger.info("PDF/A compliance markers transferred to merged output");
+                } catch (IOException e) {
+                    logger.warning("Could not attach PDF/A markers to merged output: " + e.getMessage());
+                }
             }
 
             destination.save(options.getOutputPath());
@@ -299,6 +311,10 @@ public class PdfManipulator {
                 PDPage sourcePage = source.getPage(p - 1);  // PDFBox is 0-based internally
                 part.importPage(sourcePage);
             }
+            // Propagate PDF/A compliance markers from source to each split part
+            if (PdfACompliance.isPdfA(source)) {
+                PdfACompliance.transfer(source, part);
+            }
             part.save(outputPath);
         }
     }
@@ -348,6 +364,35 @@ public class PdfManipulator {
             }
         } catch (InvalidPasswordException e) {
             throw new PasswordRequiredException(path, password != null, e);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // PDF/A propagation
+    // -----------------------------------------------------------------------
+
+    /**
+     * After a merge, checks whether any source was PDF/A and, if so, re-attaches
+     * the PDF/A identification to the merged output. We load the output, attach,
+     * and re-save in-place.
+     */
+    private static void transferPdfAIfNeeded(java.util.List<String> inputPaths,
+                                              String outputPath) {
+        // Check if any input was PDF/A
+        boolean anyPdfA = false;
+        for (String ip : inputPaths) {
+            try (PDDocument doc = org.apache.pdfbox.Loader.loadPDF(new java.io.File(ip))) {
+                if (PdfACompliance.isPdfA(doc)) { anyPdfA = true; break; }
+            } catch (Exception ignored) {}
+        }
+        if (!anyPdfA) return;
+
+        try (PDDocument merged = org.apache.pdfbox.Loader.loadPDF(new java.io.File(outputPath))) {
+            PdfACompliance.attach(merged);
+            merged.save(outputPath);
+            logger.info("PDF/A compliance markers transferred to merged output");
+        } catch (Exception e) {
+            logger.warning("Could not transfer PDF/A markers to merged output: " + e.getMessage());
         }
     }
 

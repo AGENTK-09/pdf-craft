@@ -1,6 +1,6 @@
 package com.pdfcreator.renderer;
 
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.PDFont;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,7 +17,7 @@ public class RenderUtil {
      * Word-wraps text to fit within maxWidth points.
      * Each \n in the input produces a paragraph break (blank line inserted).
      */
-    public static List<String> wrapText(String text, PDType1Font font,
+    public static List<String> wrapText(String text, PDFont font,
                                          int fontSize, float maxWidth) throws IOException {
         List<String> lines = new ArrayList<>();
         if (text == null || text.isBlank()) return lines;
@@ -46,7 +46,7 @@ public class RenderUtil {
      * Truncates text to fit within maxWidth, appending "…" if truncated.
      * Used for table cells where overflow would break column alignment.
      */
-    public static String truncateToFit(String text, PDType1Font font,
+    public static String truncateToFit(String text, PDFont font,
                                         int fontSize, float maxWidth) throws IOException {
         if (text == null) return "";
         float width = font.getStringWidth(text) / 1000f * fontSize;

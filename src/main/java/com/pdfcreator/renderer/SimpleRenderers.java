@@ -4,11 +4,11 @@ import com.pdfcreator.config.PdfConfig;
 import com.pdfcreator.datasource.DocumentData;
 import com.pdfcreator.generator.ColorUtil;
 import com.pdfcreator.generator.PageContext;
+import com.pdfcreator.pdfa.FontLoader;
 import com.pdfcreator.template.TemplateSection;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
 import java.awt.Color;
@@ -19,6 +19,9 @@ import java.util.logging.Logger;
 /**
  * All simple (non-table) section renderer implementations.
  * Each is a small focused class implementing SectionRenderer.
+ *
+ * All font access goes through FontLoader — never construct PDType1Font directly.
+ * This ensures PDF/A compliance (embedded fonts) when pdfaMode is active.
  */
 public class SimpleRenderers {
 
@@ -31,13 +34,14 @@ public class SimpleRenderers {
     public static class HeadingRenderer implements SectionRenderer {
         @Override
         public void render(TemplateSection section, PageContext ctx, PdfConfig config,
-                           DocumentData data, PDDocument document) throws IOException {
+                           DocumentData data, PDDocument document,
+                           FontLoader fontLoader) throws IOException {
             String text = section.getContent();
             if (text == null || text.isBlank()) return;
 
-            PDType1Font font = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
-            int fontSize     = config.getTitleFontSize();
-            Color color      = ColorUtil.fromHex(config.getTitleColor(), Color.BLACK);
+            PDFont font  = fontLoader.boldFor(config.getFontFamily());
+            int fontSize = config.getTitleFontSize();
+            Color color  = ColorUtil.fromHex(config.getTitleColor(), Color.BLACK);
 
             PDPageContentStream cs = ctx.getContentStream();
             cs.beginText();
@@ -64,13 +68,14 @@ public class SimpleRenderers {
     public static class SubheadingRenderer implements SectionRenderer {
         @Override
         public void render(TemplateSection section, PageContext ctx, PdfConfig config,
-                           DocumentData data, PDDocument document) throws IOException {
+                           DocumentData data, PDDocument document,
+                           FontLoader fontLoader) throws IOException {
             String text = section.getContent();
             if (text == null || text.isBlank()) return;
 
-            PDType1Font font = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
-            int fontSize     = (int) ((config.getTitleFontSize() + config.getBodyFontSize()) / 2.0);
-            Color color      = ColorUtil.fromHex(config.getTitleColor(), Color.BLACK);
+            PDFont font  = fontLoader.boldFor(config.getFontFamily());
+            int fontSize = (int) ((config.getTitleFontSize() + config.getBodyFontSize()) / 2.0);
+            Color color  = ColorUtil.fromHex(config.getTitleColor(), Color.BLACK);
 
             PDPageContentStream cs = ctx.getContentStream();
             cs.beginText();
@@ -91,14 +96,15 @@ public class SimpleRenderers {
     public static class BodyRenderer implements SectionRenderer {
         @Override
         public void render(TemplateSection section, PageContext ctx, PdfConfig config,
-                           DocumentData data, PDDocument document) throws IOException {
+                           DocumentData data, PDDocument document,
+                           FontLoader fontLoader) throws IOException {
             String text = section.getContent();
             if (text == null || text.isBlank()) return;
 
-            PDType1Font font    = fontFromFamily(config.getFontFamily());
-            int fontSize        = config.getBodyFontSize();
-            float lineHeight    = fontSize * config.getLineSpacing();
-            Color color         = ColorUtil.fromHex(config.getFontColor(), Color.BLACK);
+            PDFont font       = fontLoader.regularFor(config.getFontFamily());
+            int    fontSize   = config.getBodyFontSize();
+            float  lineHeight = fontSize * config.getLineSpacing();
+            Color  color      = ColorUtil.fromHex(config.getFontColor(), Color.BLACK);
 
             for (String line : RenderUtil.wrapText(text, font, fontSize, ctx.getUsableWidth())) {
                 if (ctx.wouldOverflow(lineHeight)) ctx.advanceY(lineHeight);
@@ -121,7 +127,8 @@ public class SimpleRenderers {
     public static class DividerRenderer implements SectionRenderer {
         @Override
         public void render(TemplateSection section, PageContext ctx, PdfConfig config,
-                           DocumentData data, PDDocument document) throws IOException {
+                           DocumentData data, PDDocument document,
+                           FontLoader fontLoader) throws IOException {
             Color color = ColorUtil.fromHex(config.getTitleColor(), Color.BLACK);
             PDPageContentStream cs = ctx.getContentStream();
             cs.setStrokingColor(color);
@@ -140,7 +147,8 @@ public class SimpleRenderers {
     public static class SpacerRenderer implements SectionRenderer {
         @Override
         public void render(TemplateSection section, PageContext ctx, PdfConfig config,
-                           DocumentData data, PDDocument document) throws IOException {
+                           DocumentData data, PDDocument document,
+                           FontLoader fontLoader) throws IOException {
             ctx.advanceY(config.getBodyFontSize() * config.getLineSpacing());
         }
     }
@@ -152,8 +160,8 @@ public class SimpleRenderers {
     public static class PageBreakRenderer implements SectionRenderer {
         @Override
         public void render(TemplateSection section, PageContext ctx, PdfConfig config,
-                           DocumentData data, PDDocument document) throws IOException {
-            // Force a new page by advancing past the bottom margin
+                           DocumentData data, PDDocument document,
+                           FontLoader fontLoader) throws IOException {
             ctx.advanceY(ctx.getYPos());
         }
     }
@@ -167,20 +175,21 @@ public class SimpleRenderers {
 
         @Override
         public void render(TemplateSection section, PageContext ctx, PdfConfig config,
-                           DocumentData data, PDDocument document) throws IOException {
+                           DocumentData data, PDDocument document,
+                           FontLoader fontLoader) throws IOException {
             String text = section.getContent();
             if (text == null || text.isBlank()) return;
 
-            PDType1Font font   = new PDType1Font(Standard14Fonts.FontName.HELVETICA_OBLIQUE);
-            int fontSize       = config.getBodyFontSize();
-            float lineHeight   = fontSize * config.getLineSpacing();
-            float usableWidth  = ctx.getUsableWidth() - (PADDING * 2);
-            Color bgColor      = ColorUtil.fromHex(
+            PDFont font       = fontLoader.regularFor(config.getFontFamily());
+            int    fontSize   = config.getBodyFontSize();
+            float  lineHeight = fontSize * config.getLineSpacing();
+            float  usableW    = ctx.getUsableWidth() - (PADDING * 2);
+            Color  bgColor    = ColorUtil.fromHex(
                 section.getBgColor() != null ? section.getBgColor() : "#FFF8DC", Color.WHITE);
-            Color textColor    = ColorUtil.fromHex(config.getFontColor(), Color.BLACK);
-            Color borderColor  = ColorUtil.fromHex(config.getTitleColor(), Color.GRAY);
+            Color  textColor  = ColorUtil.fromHex(config.getFontColor(), Color.BLACK);
+            Color  borderColor = ColorUtil.fromHex(config.getTitleColor(), Color.GRAY);
 
-            java.util.List<String> lines = RenderUtil.wrapText(text, font, fontSize, usableWidth);
+            java.util.List<String> lines = RenderUtil.wrapText(text, font, fontSize, usableW);
             float boxHeight = (lines.size() * lineHeight) + (PADDING * 2);
 
             if (ctx.wouldOverflow(boxHeight)) ctx.advanceY(ctx.getYPos());
@@ -190,19 +199,15 @@ public class SimpleRenderers {
             float boxW = ctx.getUsableWidth();
 
             PDPageContentStream cs = ctx.getContentStream();
-
-            // Fill background
             cs.setNonStrokingColor(bgColor);
             cs.addRect(boxX, boxY, boxW, boxHeight);
             cs.fill();
 
-            // Draw border
             cs.setStrokingColor(borderColor);
             cs.setLineWidth(0.75f);
             cs.addRect(boxX, boxY, boxW, boxHeight);
             cs.stroke();
 
-            // Draw text
             float textY = ctx.getYPos() - PADDING - lineHeight + 2;
             for (String line : lines) {
                 cs.beginText();
@@ -225,7 +230,8 @@ public class SimpleRenderers {
     public static class ImageRenderer implements SectionRenderer {
         @Override
         public void render(TemplateSection section, PageContext ctx, PdfConfig config,
-                           DocumentData data, PDDocument document) throws IOException {
+                           DocumentData data, PDDocument document,
+                           FontLoader fontLoader) throws IOException {
             String imagePath = section.getContent();
             if (imagePath == null || imagePath.isBlank()) return;
 
@@ -257,18 +263,5 @@ public class SimpleRenderers {
             logger.info(String.format("Image: %s → %.0fx%.0f at (%s)", imagePath, drawWidth, drawHeight, section.getAlign()));
             ctx.setYPos(y - 8);
         }
-    }
-
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
-
-    static PDType1Font fontFromFamily(String fontFamily) {
-        if (fontFamily == null) return new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-        return switch (fontFamily.toUpperCase()) {
-            case "TIMES_ROMAN" -> new PDType1Font(Standard14Fonts.FontName.TIMES_ROMAN);
-            case "COURIER"     -> new PDType1Font(Standard14Fonts.FontName.COURIER);
-            default            -> new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-        };
     }
 }

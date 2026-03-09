@@ -5,6 +5,8 @@ import com.pdfcreator.datasource.DataSource;
 import com.pdfcreator.datasource.DocumentData;
 import com.pdfcreator.generator.ColorUtil;
 import com.pdfcreator.generator.PageContext;
+import com.pdfcreator.pdfa.FontLoader;
+import com.pdfcreator.pdfa.PdfACompliance;
 import com.pdfcreator.renderer.SectionRenderer;
 import com.pdfcreator.renderer.SectionRendererRegistry;
 import com.pdfcreator.service.ConfigService;
@@ -13,8 +15,8 @@ import com.pdfcreator.template.DocumentMetadata;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDFont;
 
 import java.awt.Color;
 import java.io.IOException;
@@ -45,11 +47,27 @@ public class RenderPipeline {
     private final ConfigService           configService;
     private final SectionRendererRegistry registry;
 
+    /** When true, generates PDF/A-1b compliant output (embedded fonts + XMP + output intent). */
+    private boolean pdfaMode = false;
+
     public RenderPipeline(String templateFilePath, String configFilePath) {
         this.templateService = new TemplateService(templateFilePath);
         this.configService   = new ConfigService(configFilePath);
         this.registry        = new SectionRendererRegistry();
     }
+
+    /**
+     * Enables PDF/A-1b compliant generation mode.
+     * When active: fonts are embedded (Liberation TTF), XMP pdfaid metadata
+     * is attached, and an sRGB output intent is included.
+     * Returns this for fluent chaining: pipeline.withPdfA(true).render(...)
+     */
+    public RenderPipeline withPdfA(boolean enabled) {
+        this.pdfaMode = enabled;
+        return this;
+    }
+
+    public boolean isPdfaMode() { return pdfaMode; }
 
     public void render(String templateId, DataSource dataSource, String outputPath) throws IOException {
 
@@ -100,21 +118,44 @@ public class RenderPipeline {
                       .build()
                 : config;
 
+            // FontLoader provides embedded fonts (PDF/A mode) or Standard14 fonts
+            FontLoader fontLoader = new FontLoader(document, pdfaMode);
+
             PageContext ctx = new PageContext(document, renderConfig, pageSize, header);
             ctx.open();
 
             for (TemplateSection section : sections) {
                 SectionRenderer renderer = registry.get(section.getType());
-                renderer.render(section, ctx, renderConfig, data, document);
+                renderer.render(section, ctx, renderConfig, data, document, fontLoader);
             }
 
             ctx.close();
 
             // 6. Stamp page footers
             int totalPages = ctx.getPageNumber();
-            stampFooters(document, config, footer, totalPages, pageSize);
+            stampFooters(document, config, footer, totalPages, pageSize, fontLoader);
 
-            document.save(outputPath);
+            // 7. Attach PDF/A-1b compliance markers (XMP + sRGB output intent)
+            //    Must happen BEFORE document.save() — metadata is part of the doc body.
+            if (pdfaMode) {
+                PdfACompliance.attach(document);
+                logger.info("PDF/A-1b compliance markers attached");
+                System.out.println("PDF/A-1b : compliance markers attached");
+            }
+
+            // PDF/A-1b (ISO 19005-1) forbids XRef streams — only a traditional
+            // xref table is allowed (Preflight error 1.4).
+            // PDFBox 3 saves in compressed mode by default, which produces an
+            // XRef stream. CompressParameters.NO_COMPRESSION disables object
+            // stream compression and forces a plain xref table to be written.
+            // This is the documented PDFBox 3 approach for PDF/A output:
+            //   https://pdfbox.apache.org/3.0/migration.html
+            if (pdfaMode) {
+                document.save(outputPath,
+                    org.apache.pdfbox.pdfwriter.compress.CompressParameters.NO_COMPRESSION);
+            } else {
+                document.save(outputPath);
+            }
             logger.info("PDF saved: " + outputPath + " (" + totalPages + " page(s))");
             System.out.println("Pages: " + totalPages + " → " + outputPath);
         }
@@ -126,13 +167,12 @@ public class RenderPipeline {
 
     private void stampFooters(PDDocument document, PdfConfig config,
                                PageFooter footer, int totalPages,
-                               PDRectangle pageSize) throws IOException {
+                               PDRectangle pageSize, FontLoader fontLoader) throws IOException {
 
-        // Determine what to show
         boolean showPageNos = (footer == null) ? totalPages > 1 : footer.isShowPageNumbers();
         if (!showPageNos && footer == null) return;
 
-        PDType1Font font  = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+        PDFont font  = fontLoader.get(FontLoader.Role.SANS);
         int fontSize      = Math.max(7, (config.getBodyFontSize() - 3));
         Color fgColor     = ColorUtil.fromHex(config.getFontColor(), Color.DARK_GRAY);
         float bandHeight  = footer != null ? footer.getBandHeight() : 20f;

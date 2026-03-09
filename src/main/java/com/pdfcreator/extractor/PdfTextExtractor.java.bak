@@ -54,7 +54,7 @@ import java.util.logging.Logger;
  *   extractor.extractToFile("report.pdf", "report.txt", ExtractionOptions.defaults());
  *
  *   // Programmatic API — extract from a PDDocument already in memory
- *   try (PDDocument doc = Loader.loadPDF(new File("report.pdf"), password)) {
+ *   try (PDDocument doc = Loader.loadPDF(new File("report.pdf"), password.getBytes())) {
  *       ExtractionResult result = extractor.extract(doc, "report.pdf", opts);
  *   }
  */
@@ -315,7 +315,7 @@ public class PdfTextExtractor {
      *
      * PDFBox 3.x API:
      *   Loader.loadPDF(File)                  — no password
-     *   Loader.loadPDF(File, String)          — with password string
+     *   Loader.loadPDF(File, byte[])          — with password bytes
      *
      * PDFBox tries the supplied bytes first as the user password, then as
      * the owner password. Both grant content extraction access.
@@ -329,7 +329,7 @@ public class PdfTextExtractor {
     private static PDDocument loadWithPassword(File file, String pdfPath,
                                                String password) throws IOException {
         try {
-            if (password != null && !password.isEmpty()) {
+            if (password != null && !password.isEmpty()) {                                
                 return Loader.loadPDF(file, password);
             } else {
                 PDDocument doc = Loader.loadPDF(file);

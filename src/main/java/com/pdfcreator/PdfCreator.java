@@ -14,12 +14,14 @@ import com.pdfcreator.printer.PdfPrinterCli;
 import com.pdfcreator.security.PdfSecurityCli;
 import com.pdfcreator.signature.PdfSignatureCli;
 import com.pdfcreator.rasterizer.PdfRasterizerCli;
+import com.pdfcreator.validator.PdfValidatorCli;
 import com.pdfcreator.template.DocumentMetadata;
 import com.pdfcreator.template.TemplateSection;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.security.Security;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import com.pdfcreator.pdfa.FontLoader;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -57,6 +59,12 @@ public class PdfCreator {
         String configFile   = getArg(args, "--config-file",   DEFAULT_CONFIG_FILE);
         String templateFile = getArg(args, "--template-file", DEFAULT_TEMPLATE_FILE);
         String templateId   = getArg(args, "--template-id",   null);
+
+        if (hasFlag(args, "--validate")) {
+            // ---- VALIDATE MODE ----
+            new PdfValidatorCli().run(args);
+            return;
+        }
 
         if (hasFlag(args, "--rasterize")) {
             // ---- RASTERIZE MODE ----
@@ -112,7 +120,8 @@ public class PdfCreator {
             String outputDir  = getArg(args, "--output-dir","output/");
             int    threads    = Integer.parseInt(getArg(args, "--threads", "4"));
 
-            RenderPipeline pipeline = new RenderPipeline(templateFile, configFile);
+            RenderPipeline pipeline = new RenderPipeline(templateFile, configFile)
+                .withPdfA(hasFlag(args, "--pdfa"));
             List<BatchJob> jobs;
 
             if (dataDir != null) {
@@ -137,6 +146,7 @@ public class PdfCreator {
                 System.exit(1);
             }
             new RenderPipeline(templateFile, configFile)
+                .withPdfA(hasFlag(args, "--pdfa"))
                 .render(templateId, new JsonFileDataSource(dataFile), outputPath);
 
         } else {
@@ -199,10 +209,11 @@ public class PdfCreator {
             info.setCreationDate(now);
             info.setModificationDate(now);
 
+            FontLoader fontLoader = new FontLoader(document, false);
             PageContext ctx = new PageContext(document, config, pageSize);
             ctx.open();
             for (TemplateSection s : sections)
-                registry.get(s.getType()).render(s, ctx, config, emptyData, document);
+                registry.get(s.getType()).render(s, ctx, config, emptyData, document, fontLoader);
             ctx.close();
             document.save(outputPath);
             System.out.println("Pages: " + ctx.getPageNumber());

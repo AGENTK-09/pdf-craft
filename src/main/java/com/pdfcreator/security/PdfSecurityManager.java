@@ -143,6 +143,15 @@ public class PdfSecurityManager {
         try (PDDocument doc = loadWithOwnerPassword(
                 inputFile, opts.getInputPath(), opts.getOwnerPassword())) {
 
+            // PDF/A-1b (ISO 19005-1 §6.1.3) forbids encryption.
+            // Encrypting a PDF/A document makes it non-conformant.
+            if (com.pdfcreator.pdfa.PdfACompliance.isPdfA(doc)) {
+                logger.warning("Encrypting a PDF/A document will make it non-conformant with ISO 19005-1. " +
+                    "The output will no longer pass PDF/A validation.");
+                System.err.println("Warning: " + opts.getInputPath() + " is a PDF/A document. " +
+                    "Encryption is forbidden by ISO 19005-1 — the output will NOT be PDF/A compliant.");
+            }
+
             // Build the protection policy
             AccessPermission ap     = opts.getPermissions().toAccessPermission();
             StandardProtectionPolicy policy = new StandardProtectionPolicy(

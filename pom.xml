@@ -61,6 +61,40 @@
             <artifactId>bcutil-jdk18on</artifactId>
             <version>1.78.1</version>
         </dependency>
+
+        <!--
+            PDFBox Preflight — PDF/A-1 validation engine. Separate artifact from pdfbox core.
+            Must be the same version as pdfbox to avoid class incompatibilities.
+        -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>preflight</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
+
+        <!--
+            PDFBox XMPBox — XMP metadata parsing and writing. Required by both preflight
+            (to check PDF/A XMP identification schema) and by our PdfACompliance class
+            (to write pdfaid:part and pdfaid:conformance fields).
+            Declared explicitly to pin the version — preflight pulls it transitively
+            but Maven does not guarantee transitive deps appear on the compile classpath.
+        -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>xmpbox</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
+
+        <!--
+            JAXB API — removed from the JDK since Java 9, but still required at runtime
+            by xmpbox internals. Without this, XMP metadata operations throw
+            NoClassDefFoundError: javax/xml/bind/... at runtime on Java 17.
+        -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
     </dependencies>
 
     <build>
