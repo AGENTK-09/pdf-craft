@@ -90,7 +90,11 @@ public class PdfCreator {
             return;
         }
 
-        if (hasFlag(args, "--sign")
+        // --sign is excluded here when --batch is also present: batch signing
+        // is handled inside the BATCH MODE block below, not by PdfSignatureCli.
+        // --verify, --list-signatures, --export-cert have no batch equivalent
+        // so they always route to PdfSignatureCli regardless.
+        if ((hasFlag(args, "--sign") && !hasFlag(args, "--batch"))
          || hasFlag(args, "--verify")
          || hasFlag(args, "--list-signatures")
          || hasFlag(args, "--export-cert")) {
@@ -123,9 +127,9 @@ public class PdfCreator {
                 System.err.println("Error: --template-id is required for batch mode.");
                 System.exit(1);
             }
-            String dataDir    = getArg(args, "--data-dir",  null);
-            String csvFile    = getArg(args, "--csv-file",  null);
-            String outputDir  = getArg(args, "--output-dir","output/");
+            String dataDir    = getArg(args, "--data-dir",   null);
+            String csvFile    = getArg(args, "--csv-file",   null);
+            String outputDir  = getArg(args, "--output-dir", "output/");
             int    threads    = Integer.parseInt(getArg(args, "--threads", "4"));
 
             RenderPipeline pipeline = new RenderPipeline(templateFile, configFile)
@@ -144,7 +148,54 @@ public class PdfCreator {
                 return;
             }
 
-            new BatchRunner(pipeline, threads).run(jobs);
+            // ── Signing: read all signing flags and wire BatchRunner.withSigning()
+            // when --keystore is present. inputPath / outputPath are intentionally
+            // not set here — BatchRunner.buildJobSigningOptions() sets them per-job.
+            String bsKeystore   = getArg(args, "--keystore",          null);
+            String bsKsPwd      = getArg(args, "--keystore-password", null);
+            String bsKsType     = getArg(args, "--keystore-type",     "PKCS12");
+            String bsAlias      = getArg(args, "--alias",             null);
+            String bsReason     = getArg(args, "--reason",            null);
+            String bsLocation   = getArg(args, "--location",          null);
+            String bsContact    = getArg(args, "--contact",           null);
+            String bsSignerName = getArg(args, "--signer-name",       null);
+            String bsTsaUrl     = getArg(args, "--tsa-url",           null);
+            boolean bsVisible   = hasFlag(args, "--visible");
+            int   bsSigPage     = intArg(args,   "--sig-page",   -1);
+            float bsSigX        = floatArg(args, "--sig-x",      50f);
+            float bsSigY        = floatArg(args, "--sig-y",      50f);
+            float bsSigW        = floatArg(args, "--sig-width",  200f);
+            float bsSigH        = floatArg(args, "--sig-height", 60f);
+
+            BatchRunner runner = new BatchRunner(pipeline, threads);
+
+            if (bsKeystore != null) {
+                if (bsKsPwd == null) {
+                    System.err.println("Error: --keystore-password is required when --keystore is supplied in batch mode.");
+                    System.exit(1);
+                }
+                com.pdfcreator.signature.SigningOptions signingTemplate =
+                    new com.pdfcreator.signature.SigningOptions.Builder()
+                        .keystorePath(bsKeystore)
+                        .keystorePassword(bsKsPwd)
+                        .keystoreType(bsKsType)
+                        .keyAlias(bsAlias)
+                        .reason(bsReason)
+                        .location(bsLocation)
+                        .contactInfo(bsContact)
+                        .signerName(bsSignerName)
+                        .tsaUrl(bsTsaUrl)
+                        .visible(bsVisible)
+                        .signaturePage(bsSigPage)
+                        .signatureRect(bsSigX, bsSigY, bsSigW, bsSigH)
+                        .buildTemplate();
+                runner.withSigning(signingTemplate);
+                System.out.printf("Signing        : enabled (keystore: %s, alias: %s)%n",
+                    bsKeystore, bsAlias != null ? bsAlias : "auto");
+                System.out.printf("TSA            : %s%n", bsTsaUrl != null ? bsTsaUrl : "none");
+            }
+
+            runner.run(jobs);
 
         } else if (templateId != null) {
             // ---- TEMPLATE MODE ----
@@ -246,6 +297,24 @@ public class PdfCreator {
               --threads <n>            Parallel threads (default: 4)
               --ref-col <col>          CSV column to use as reference ID (default: ref_id)
               --out-col <col>          CSV column for output filename (default: output_file)
+              --pdfa                   Generate PDF/A-1b compliant output
+
+            BATCH SIGNING (add to any batch command to sign every PDF):
+              --keystore <path>        PKCS12 or JKS keystore (enables signing)
+              --keystore-password <p>  Keystore password (required with --keystore)
+              --keystore-type <type>   PKCS12 (default) or JKS
+              --alias <name>           Key alias (default: auto-detect first)
+              --reason <text>          Reason for signing
+              --location <text>        Signing location
+              --contact <email>        Contact information
+              --signer-name <name>     Override display name (default: cert CN)
+              --tsa-url <url>          RFC 3161 TSA endpoint for trusted timestamp
+              --visible                Render a visible signature box on the page
+              --sig-page <n>           Page for visible box, 1-based (default: last)
+              --sig-x <pts>            Box left edge in PDF points (default: 50)
+              --sig-y <pts>            Box bottom edge in PDF points (default: 50)
+              --sig-width <pts>        Box width in PDF points (default: 200)
+              --sig-height <pts>       Box height in PDF points (default: 60)
 
             DIRECT MODE:
               --config-id <id>         Config preset (default: default)
@@ -479,5 +548,19 @@ public class PdfCreator {
     private static boolean hasFlag(String[] args, String flag) {
         for (String a : args) if (a.equals(flag)) return true;
         return false;
+    }
+
+    private static int intArg(String[] args, String flag, int def) {
+        String v = getArg(args, flag, null);
+        if (v == null) return def;
+        try { return Integer.parseInt(v.trim()); }
+        catch (NumberFormatException e) { return def; }
+    }
+
+    private static float floatArg(String[] args, String flag, float def) {
+        String v = getArg(args, flag, null);
+        if (v == null) return def;
+        try { return Float.parseFloat(v.trim()); }
+        catch (NumberFormatException e) { return def; }
     }
 }

@@ -147,12 +147,24 @@ public class PdfFormFiller {
                 }
             }
 
+            // Set NeedAppearances so viewers regenerate appearances on open.
+            // refreshAppearances() is not called — throws in PDFBox 3.x on
+            // radio/checkbox fields (parent node has no widget rectangle).
+            acroForm.setNeedAppearances(true);
+
             // Flatten if requested
             boolean flattened = false;
             if (opts.isFlatten()) {
-                acroForm.flatten();
-                flattened = true;
-                logger.info("AcroForm flattened — fields are now static content");
+                try {
+                    acroForm.flatten();
+                    flattened = true;
+                    logger.info("AcroForm flattened — fields are now static content");
+                } catch (Exception e) {
+                    logger.warning("flatten() failed — saving interactive form instead: "
+                        + e.getMessage());
+                    System.out.println("WARNING: flatten() failed (" + e.getMessage() +
+                        "). Saved as interactive form.");
+                }
             }
 
             // Save output

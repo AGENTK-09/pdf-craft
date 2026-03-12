@@ -387,10 +387,28 @@ public class PdfSecurityManager {
      * Reads the encryption status and permission flags of a PDF without
      * modifying it.
      *
-     * For unencrypted PDFs, no password is needed.
-     * For encrypted PDFs, the ownerPassword is used if provided, which
-     * reveals the real permission flags (with user password only, PDFBox
-     * may report flags as if they are denied even when the owner grants them).
+     * ── FIX: inspect no longer requires a password for PDFs encrypted with
+     * an empty user password (the default when only --owner-password is set).
+     *
+     * The previous implementation called loadWithOwnerPassword() which threw
+     * PasswordRequiredException whenever no password was supplied and the file
+     * was encrypted — even when PDFBox could open it with the empty string.
+     * This made --inspect-security unusable without --owner-password for the
+     * most common encrypt use-case (empty user password, custom flags).
+     *
+     * The fix uses Loader.loadPDF(file, "") — PDFBox opens files that have an
+     * empty user password without prompting. The PDEncryption dictionary is
+     * readable regardless of which password was used to open the file.
+     * The stored permission bitmask is read from enc.getPermissions() (not
+     * getCurrentAccessPermission()) so the real on-disk flags are always
+     * reported accurately, whether opened as user or owner.
+     *
+     * Behaviour matrix after fix:
+     *   Encrypted, empty user pwd, no --owner-password  → OK, shows flags + note
+     *   Encrypted, empty user pwd, --owner-password     → OK, shows flags (no note)
+     *   Encrypted, non-empty user pwd, no password      → PasswordRequiredException (correct)
+     *   Encrypted, non-empty user pwd, --owner-password → OK, shows flags
+     *   Plain PDF, no password                          → OK, unrestricted
      *
      * No output file is written.
      *
@@ -398,48 +416,56 @@ public class PdfSecurityManager {
      * @return SecurityResult with encryption and permission details
      */
     private SecurityResult inspect(EncryptionOptions opts) throws IOException {
-        File inputFile = requireFile(opts.getInputPath());
+        File   inputFile = requireFile(opts.getInputPath());
+        String pwd       = opts.getOwnerPassword();  // may be null
 
-        // Detect encryption without a password first
-        boolean encryptedOnDisk = isEncrypted(inputFile);
+        // Use the supplied password, or "" to attempt opening without prompting.
+        // PDFBox opens files whose user-password is "" with the empty string.
+        // For plain PDFs the empty string is also accepted.
+        String loadPwd = (pwd != null && !pwd.isBlank()) ? pwd : "";
 
-        if (!encryptedOnDisk) {
-            // Plain PDF — no password needed
-            try (PDDocument doc = Loader.loadPDF(inputFile)) {
+        try (PDDocument doc = Loader.loadPDF(inputFile, loadPwd)) {
+
+            if (!doc.isEncrypted()) {
+                // Plain PDF — no encryption at all
                 return new SecurityResult.Builder()
                     .operation(EncryptionOptions.Operation.INSPECT)
                     .inputPath(opts.getInputPath())
                     .encrypted(false)
                     .algorithm("none")
                     .keyLengthBits(0)
-                    .permissions(PdfPermissions.allAllowed())  // unrestricted
+                    .permissions(PdfPermissions.allAllowed())
                     .build();
             }
-        }
 
-        // Encrypted PDF — try to open with supplied password (owner preferred)
-        String pwd = opts.getOwnerPassword();
-        try (PDDocument doc = loadWithOwnerPassword(inputFile, opts.getInputPath(), pwd)) {
-
-            PDEncryption enc = doc.getEncryption();
-            String algo      = resolveAlgorithm(enc);
-            int    keyBits   = enc != null ? enc.getLength() * 8 : 0;
+            PDEncryption enc  = doc.getEncryption();
+            String       algo = resolveAlgorithm(enc);
+            int          keyBits = enc != null ? enc.getLength() * 8 : 0;
 
             // ── IMPORTANT: read stored flags from the encryption dictionary ──
             //
             // doc.getCurrentAccessPermission() returns what the CURRENT SESSION
-            // is allowed to do — always all-true when opened with the owner
-            // password, regardless of what flags are actually stored on disk.
+            // is allowed to do — all-true when opened as owner, restricted when
+            // opened as user. Neither reflects the real stored flags reliably.
             //
             // The stored flags live in enc.getPermissions() as a raw integer
             // bitmask (PDF spec table 22). Constructing AccessPermission from
-            // that integer gives the real, on-disk flags.
+            // that integer always gives the real, on-disk flags regardless of
+            // how the document was opened.
             PdfPermissions perms;
             if (enc != null) {
                 AccessPermission storedAp = new AccessPermission(enc.getPermissions());
                 perms = PdfPermissions.fromAccessPermission(storedAp);
             } else {
                 perms = PdfPermissions.allAllowed();
+            }
+
+            // If no owner password was supplied, note that flags are from the
+            // stored dictionary — accurate, but unconfirmed at owner level.
+            if (pwd == null || pwd.isBlank()) {
+                System.err.println("Note: --owner-password not supplied. " +
+                    "Permission flags are read from the stored encryption dictionary " +
+                    "and are accurate. Supply --owner-password to confirm owner-level access.");
             }
 
             logger.info("Inspected: " + opts.getInputPath() + " — " + algo);
@@ -452,6 +478,13 @@ public class PdfSecurityManager {
                 .keyLengthBits(keyBits)
                 .permissions(perms)
                 .build();
+
+        } catch (InvalidPasswordException e) {
+            // Only reaches here when the file has a non-empty user password
+            // AND no password (or the wrong password) was supplied.
+            // This is genuinely correct — the file is locked to all access.
+            throw new com.pdfcreator.extractor.PasswordRequiredException(
+                opts.getInputPath(), pwd != null && !pwd.isBlank(), e);
         }
     }
 

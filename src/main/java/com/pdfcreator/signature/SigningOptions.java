@@ -256,11 +256,30 @@ public final class SigningOptions {
             return this;
         }
 
+        /**
+         * Builds a fully-validated SigningOptions for single-file signing.
+         * Requires inputPath, outputPath, keystorePath, and keystorePassword.
+         */
         public SigningOptions build() {
             if (inputPath == null || inputPath.isBlank())
                 throw new IllegalStateException("SigningOptions: inputPath is required");
             if (outputPath == null || outputPath.isBlank())
                 throw new IllegalStateException("SigningOptions: outputPath is required");
+            if (keystorePath == null || keystorePath.isBlank())
+                throw new IllegalStateException("SigningOptions: keystorePath is required");
+            if (keystorePassword == null)
+                throw new IllegalStateException("SigningOptions: keystorePassword is required");
+            return new SigningOptions(this);
+        }
+
+        /**
+         * Builds a SigningOptions template for batch signing.
+         *
+         * inputPath and outputPath are intentionally omitted — BatchRunner sets
+         * them per-job in buildJobSigningOptions(). All other required fields
+         * (keystorePath, keystorePassword) are still validated.
+         */
+        public SigningOptions buildTemplate() {
             if (keystorePath == null || keystorePath.isBlank())
                 throw new IllegalStateException("SigningOptions: keystorePath is required");
             if (keystorePassword == null)

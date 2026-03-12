@@ -1,15 +1,20 @@
 package com.pdfcreator.forms;
 
+import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationWidget;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceEntry;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream;
 import org.apache.pdfbox.pdmodel.interactive.form.*;
 
 import java.io.IOException;
@@ -141,8 +146,8 @@ public class AcroFormBuilder {
                                            widgetRect, da, false);
             case MULTILINE -> addTextField(page, acroForm, fieldDef,
                                            widgetRect, da, true);
-            case CHECKBOX  -> addCheckBox(page, acroForm, fieldDef, widgetRect);
-            case RADIO     -> addRadioGroup(page, acroForm, fieldDef,
+            case CHECKBOX  -> addCheckBox(document, page, acroForm, fieldDef, widgetRect);
+            case RADIO     -> addRadioGroup(document, page, acroForm, fieldDef,
                                             widgetRect, fieldDef.getToggleSize());
             case COMBO     -> addComboBox(page, acroForm, fieldDef, widgetRect, da);
             case LISTBOX   -> addListBox(page, acroForm, fieldDef, widgetRect, da);
@@ -171,13 +176,18 @@ public class AcroFormBuilder {
         PDAnnotationWidget widget = createWidget(rect, fieldDef);
         field.getWidgets().add(widget);
         widget.setPage(page);
-
-        if (fieldDef.getDefaultValue() != null) {
-            field.setValue(fieldDef.getDefaultValue());
-        }
+        wireToField(field, widget);
 
         acroForm.getFields().add(field);
         addWidgetToPage(page, widget);
+
+        // Set value after the field is registered in the AcroForm.
+        // PDTextField.setValue() is safe to call directly — it does not
+        // trigger the recursive appearance generation that choice fields do.
+        if (fieldDef.getDefaultValue() != null) {
+            field.getCOSObject().setString(COSName.V, fieldDef.getDefaultValue());
+            field.getCOSObject().setString(COSName.DV, fieldDef.getDefaultValue());
+        }
 
         logger.fine("Added " + (multiline ? "MULTILINE" : "TEXT") +
             " field: " + fieldDef.getFieldName());
@@ -187,7 +197,8 @@ public class AcroFormBuilder {
     // CheckBox
     // -----------------------------------------------------------------------
 
-    private void addCheckBox(PDPage page,
+    private void addCheckBox(PDDocument document,
+                              PDPage page,
                               PDAcroForm acroForm,
                               FormFieldDef fieldDef,
                               PDRectangle rect) throws IOException {
@@ -202,9 +213,25 @@ public class AcroFormBuilder {
         PDAnnotationWidget widget = createWidget(rect, fieldDef);
         field.getWidgets().add(widget);
         widget.setPage(page);
+        wireToField(field, widget);
+
+        // ── Generate minimal On/Off appearance streams ──────────────────────
+        // PDFBox 3.x does not auto-generate /AP for checkboxes. Without /AP,
+        // viewers render a blank box even with NeedAppearances=true.
+        // We generate empty placeholder streams here; NeedAppearances=true
+        // instructs the viewer to regenerate them with the correct glyph.
+        buildCheckboxAppearance(document, widget, rect);
 
         String dv = fieldDef.getDefaultValue();
-        if ("Yes".equalsIgnoreCase(dv) || "true".equalsIgnoreCase(dv) || "on".equalsIgnoreCase(dv)) {
+        boolean checked = dv != null &&
+            ("Yes".equalsIgnoreCase(dv) || "true".equalsIgnoreCase(dv) || "on".equalsIgnoreCase(dv));
+
+        // Set /AS (appearance state) on the widget to match the initial value.
+        // This is what tells viewers which appearance stream to show.
+        widget.getCOSObject().setName(COSName.AS.getName(),
+            checked ? "Yes" : COSName.OFF.getName());
+
+        if (checked) {
             field.check();
         } else {
             field.unCheck();
@@ -220,7 +247,8 @@ public class AcroFormBuilder {
     // RadioButton group
     // -----------------------------------------------------------------------
 
-    private void addRadioGroup(PDPage page,
+    private void addRadioGroup(PDDocument document,
+                                PDPage page,
                                 PDAcroForm acroForm,
                                 FormFieldDef fieldDef,
                                 PDRectangle firstRect,
@@ -235,8 +263,9 @@ public class AcroFormBuilder {
 
         List<PDAnnotationWidget> widgets = new ArrayList<>();
         float y = firstRect.getLowerLeftY();
+        List<String> options = fieldDef.getOptions();
 
-        for (String option : fieldDef.getOptions()) {
+        for (String option : options) {
             PDRectangle buttonRect = new PDRectangle(
                 firstRect.getLowerLeftX(), y, buttonSize, buttonSize);
 
@@ -246,6 +275,14 @@ public class AcroFormBuilder {
             applyBorderStyle(widget);
             widget.setContents(option);
 
+            // ── Generate On/Off appearance streams for each radio widget ──
+            // Same requirement as checkboxes: /AP must exist or viewer renders blank.
+            buildToggleAppearance(document, widget, buttonRect, option);
+
+            // Set initial appearance state to Off — will be updated by setValue below.
+            widget.getCOSObject().setName(COSName.AS.getName(), COSName.OFF.getName());
+
+            wireToField(field, widget);
             widgets.add(widget);
             addWidgetToPage(page, widget);
             y -= (buttonSize + 4f);
@@ -254,11 +291,21 @@ public class AcroFormBuilder {
         field.setWidgets(widgets);
         field.setExportValues(fieldDef.getOptions());
 
-        if (fieldDef.getDefaultValue() != null) {
-            field.setValue(fieldDef.getDefaultValue());
-        }
-
+        // Add to AcroForm before setting value (same reason as combo/listbox).
         acroForm.getFields().add(field);
+
+        if (fieldDef.getDefaultValue() != null) {
+            // Direct COS write for /V — avoids appearance generation loop.
+            field.getCOSObject().setString(COSName.V, fieldDef.getDefaultValue());
+            field.getCOSObject().setString(COSName.DV, fieldDef.getDefaultValue());
+            // Update /AS on the matching widget to its export value name.
+            for (int i = 0; i < widgets.size(); i++) {
+                if (options.get(i).equals(fieldDef.getDefaultValue())) {
+                    widgets.get(i).getCOSObject().setName(
+                        COSName.AS.getName(), options.get(i));
+                }
+            }
+        }
 
         logger.fine("Added RADIO group: " + fieldDef.getFieldName() +
             " (" + fieldDef.getOptions().size() + " options)");
@@ -278,18 +325,32 @@ public class AcroFormBuilder {
         field.setPartialName(fieldDef.getFieldName());
         field.getCOSObject().setString(COSName.DA, da);
         field.setOptions(fieldDef.getOptions());
+        // setEdit(false) explicitly marks this as a dropdown, not a free-text
+        // combo. Without this some viewers may render it as a plain text field.
+        field.setEdit(false);
         applyCommonFlags(field, fieldDef);
 
         PDAnnotationWidget widget = createWidget(rect, fieldDef);
         field.getWidgets().add(widget);
         widget.setPage(page);
+        wireToField(field, widget);
 
-        if (fieldDef.getDefaultValue() != null) {
-            field.setValue(fieldDef.getDefaultValue());
-        }
-
+        // Add to AcroForm BEFORE setting value — PDFBox 3.x setValue() on
+        // choice fields walks acroForm.getFields() to resolve the field.
         acroForm.getFields().add(field);
         addWidgetToPage(page, widget);
+
+        // Set default value via direct COS write (/V and /DV entries) rather
+        // than field.setValue(). PDComboBox.setValue() triggers appearance
+        // generation which tries to resolve fonts through the widget's /DR
+        // resources. If /DR is incomplete (our case — font lives in the
+        // AcroForm DefaultResources, not the widget) PDFBox loops indefinitely.
+        // NeedAppearances=true on the AcroForm makes the viewer regenerate the
+        // appearance correctly on open, so no appearance stream is needed here.
+        if (fieldDef.getDefaultValue() != null && !fieldDef.getDefaultValue().isBlank()) {
+            field.getCOSObject().setString(COSName.V, fieldDef.getDefaultValue());
+            field.getCOSObject().setString(COSName.DV, fieldDef.getDefaultValue());
+        }
 
         logger.fine("Added COMBO field: " + fieldDef.getFieldName() +
             " (" + fieldDef.getOptions().size() + " options)");
@@ -314,16 +375,91 @@ public class AcroFormBuilder {
         PDAnnotationWidget widget = createWidget(rect, fieldDef);
         field.getWidgets().add(widget);
         widget.setPage(page);
+        wireToField(field, widget);
 
-        if (fieldDef.getDefaultValue() != null) {
-            field.setValue(fieldDef.getDefaultValue());
-        }
-
+        // Same reasoning as addComboBox — add to AcroForm before any value
+        // write, and use direct COS /V write to avoid appearance generation.
         acroForm.getFields().add(field);
         addWidgetToPage(page, widget);
 
+        if (fieldDef.getDefaultValue() != null && !fieldDef.getDefaultValue().isBlank()) {
+            field.getCOSObject().setString(COSName.V, fieldDef.getDefaultValue());
+            field.getCOSObject().setString(COSName.DV, fieldDef.getDefaultValue());
+        }
+
         logger.fine("Added LISTBOX field: " + fieldDef.getFieldName() +
             " (" + fieldDef.getOptions().size() + " options)");
+    }
+
+    // -----------------------------------------------------------------------
+    // Appearance stream generation
+    // -----------------------------------------------------------------------
+
+    /**
+     * Generates minimal On and Off appearance streams for a checkbox widget.
+     *
+     * PDFBox 3.x does not auto-generate /AP for checkbox or radio widgets.
+     * Without /AP entries, most viewers (Adobe Acrobat, PDF.js, Preview) render
+     * the widget as a blank rectangle even when NeedAppearances=true is set on
+     * the AcroForm. The viewer uses NeedAppearances to REPLACE existing streams,
+     * not to generate them from scratch — the initial streams must exist.
+     *
+     * We generate empty content streams. The viewer regenerates them with the
+     * correct ZapfDingbats check-mark/circle glyph on first render.
+     */
+    private void buildCheckboxAppearance(PDDocument document,
+                                          PDAnnotationWidget widget,
+                                          PDRectangle rect) throws IOException {
+        buildToggleAppearance(document, widget, rect, "Yes");
+    }
+
+    /**
+     * Generates minimal On and Off appearance streams for a toggle widget
+     * (checkbox or radio button). The "on" state name differs:
+     *   checkbox  → "Yes" (PDF spec default export value for checked state)
+     *   radio     → the option's export value (e.g. "Monthly")
+     *
+     * Structure written to /AP:
+     *   /AP << /N << /Yes <empty stream>   (or /<exportValue>)
+     *               /Off <empty stream> >> >>
+     *
+     * The streams are intentionally empty — NeedAppearances=true on the
+     * AcroForm tells conforming viewers to regenerate them from the DA string
+     * and field value. Using empty streams rather than no streams ensures that
+     * viewers which check for /AP existence before rendering do not skip the field.
+     */
+    private void buildToggleAppearance(PDDocument document,
+                                        PDAnnotationWidget widget,
+                                        PDRectangle rect,
+                                        String onStateName) throws IOException {
+        PDAppearanceDictionary appearance = new PDAppearanceDictionary();
+
+        // Normal appearance (/N) — required; rollover (/R) and down (/D) optional
+        COSDictionary normalDict = new COSDictionary();
+
+        // "On" state stream
+        PDAppearanceStream onStream = buildEmptyAppearanceStream(document, widget, rect);
+        normalDict.setItem(COSName.getPDFName(onStateName), onStream.getCOSObject());
+
+        // "Off" state stream
+        PDAppearanceStream offStream = buildEmptyAppearanceStream(document, widget, rect);
+        normalDict.setItem(COSName.OFF, offStream.getCOSObject());
+
+        appearance.getCOSObject().setItem(COSName.N, normalDict);
+        widget.setAppearance(appearance);
+    }
+
+    /**
+     * Creates an empty PDAppearanceStream with the widget bounding box set.
+     * The stream content is empty — the viewer fills it when NeedAppearances=true.
+     */
+    private PDAppearanceStream buildEmptyAppearanceStream(PDDocument document,
+                                                           PDAnnotationWidget widget,
+                                                           PDRectangle rect) throws IOException {
+        PDAppearanceStream stream = new PDAppearanceStream(document);
+        stream.setBBox(new PDRectangle(rect.getWidth(), rect.getHeight()));
+        stream.setResources(new PDResources());
+        return stream;
     }
 
     // -----------------------------------------------------------------------
@@ -392,6 +528,27 @@ public class AcroFormBuilder {
         if (tooltip != null) widget.setContents(tooltip);
 
         return widget;
+    }
+
+    /**
+     * Wires a widget annotation back to its parent field.
+     *
+     * PDFBox 3.x does NOT write /Parent automatically when you call
+     * field.getWidgets().add(widget). Without /Parent, the viewer cannot
+     * navigate from the annotation to its field — the widget renders as a
+     * non-interactive rectangle even though the AcroForm structure is correct.
+     *
+     * Also sets the Print annotation flag (bit 2) so the widget is visible
+     * on screen and in print. This is required — an annotation without the
+     * Print flag is hidden by default in most viewers.
+     */
+    private void wireToField(PDField field, PDAnnotationWidget widget) {
+        // /Parent — back-reference from widget to field COS dictionary
+        widget.getCOSObject().setItem(COSName.PARENT, field.getCOSObject());
+        // Print flag (bit 2 = integer value 4). Use setAnnotationFlags to
+        // avoid clearing any flags already set (e.g. by PDFBox internals).
+        int flags = widget.getAnnotationFlags();
+        widget.setAnnotationFlags(flags | 4);  // bit 2 = Print
     }
 
     private void applyBorderStyle(PDAnnotationWidget widget) {

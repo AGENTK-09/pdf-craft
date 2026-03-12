@@ -196,6 +196,11 @@ public class FormRenderer implements SectionRenderer {
             ctx.setYPos(ctx.getYPos() - consumed);
         }
 
+        // NeedAppearances=true tells viewers to regenerate field appearances
+        // on open. refreshAppearances() is not called — throws in PDFBox 3.x
+        // on radio/checkbox fields (parent node has no widget rectangle).
+        acroForm.setNeedAppearances(true);
+
         logger.fine("FormRenderer: rendered " +
             formSection.getFieldDefs().size() + " field(s)");
     }

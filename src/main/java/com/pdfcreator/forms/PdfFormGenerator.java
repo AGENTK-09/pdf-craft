@@ -126,9 +126,13 @@ public class PdfFormGenerator {
             ctx.close();
 
             // ── 5. Save ───────────────────────────────────────────────────
-            // Forms are never saved with CompressParameters.NO_COMPRESSION
-            // because PDF/A mode is disabled for forms. Default compression
-            // is fine for interactive documents.
+            //
+            // NeedAppearances=true tells viewers to regenerate field appearance
+            // streams from the DA string and current value on first open.
+            // refreshAppearances() is not called — it throws in PDFBox 3.x
+            // on radio/checkbox fields (parent node has no widget rectangle).
+            acroForm.setNeedAppearances(true);
+
             document.save(opts.getOutputPath());
             logger.info("Form PDF saved: " + opts.getOutputPath() +
                 " (" + opts.getFieldDefs().size() + " field(s))");
