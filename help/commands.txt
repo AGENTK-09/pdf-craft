@@ -1,0 +1,2 @@
+Generate a dark themed PDF | java -jar pdfcreator.jar --config dark --title "Dark Report" --text "Dark mode body" --output dark.pdf
+Generate analysis report with chart | java -jar pdfcreator.jar --config report --title "Analysis" --text "See chart" --image chart.png --output analysis.pdf

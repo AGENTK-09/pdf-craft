@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PdfCreator — Usage Guide Part 1</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+:root{--tr:0.2s ease}
+[data-theme="dark"]{--bg:#0d1117;--bg-s:#161b22;--bg-c:#1c2128;--bg-code:#13191f;--bd:#30363d;--bd-s:#21262d;--tx:#e6edf3;--tx-m:#8b949e;--tx-f:#484f58;--ac:#2f81f7;--ac-g:rgba(47,129,247,.14);--ac-b:rgba(47,129,247,.28);--ac2:#3fb950;--aw:#d29922;--ae:#f85149;--tag-bg:rgba(47,129,247,.12);--tag-tx:#79c0ff;--scr:#30363d}
+[data-theme="light"]{--bg:#f6f8fa;--bg-s:#ffffff;--bg-c:#ffffff;--bg-code:#f0f2f4;--bd:#d0d7de;--bd-s:#e8ecef;--tx:#1f2328;--tx-m:#57606a;--tx-f:#bbc1c8;--ac:#0969da;--ac-g:rgba(9,105,218,.10);--ac-b:rgba(9,105,218,.25);--ac2:#1a7f37;--aw:#9a6700;--ae:#cf222e;--tag-bg:rgba(9,105,218,.08);--tag-tx:#0969da;--scr:#d0d7de}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans',sans-serif;font-size:15px;line-height:1.7;background:var(--bg);color:var(--tx);transition:background var(--tr),color var(--tr);min-height:100vh}
+.layout{display:grid;grid-template-columns:264px 1fr;grid-template-rows:52px 1fr;min-height:100vh}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 24px;background:var(--bg-s);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:200;transition:background var(--tr),border-color var(--tr)}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.logo-mark{width:28px;height:28px;background:var(--ac);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:#fff;box-shadow:0 0 12px var(--ac-g)}
+.logo-name{font-weight:700;font-size:15px;color:var(--tx);letter-spacing:-.01em}
+.tb-div{width:1px;height:20px;background:var(--bd);flex-shrink:0}
+.tb-sub{font-size:12px;color:var(--tx-m);font-family:'IBM Plex Mono',monospace}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.badge{font-size:11px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:20px;background:var(--tag-bg);color:var(--tag-tx);border:1px solid var(--ac-b)}
+.theme-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:var(--bg-c);color:var(--tx-m);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--tr);font-size:16px}
+.theme-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--ac-g)}
+.sidebar{background:var(--bg-s);border-right:1px solid var(--bd);position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;padding:16px 0;transition:background var(--tr),border-color var(--tr)}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--scr);border-radius:3px}
+.nav-group{margin-bottom:4px}
+.nav-label{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--tx-f);padding:10px 18px 4px}
+.nav-a{display:flex;align-items:center;gap:8px;padding:5px 18px;font-size:13px;color:var(--tx-m);text-decoration:none;border-left:2px solid transparent;transition:all .14s;border-radius:0 6px 6px 0;margin-right:8px;white-space:nowrap}
+.nav-a:hover{color:var(--tx);background:var(--ac-g);border-left-color:var(--ac)}
+.nav-a.active{color:var(--ac);background:var(--ac-g);border-left-color:var(--ac);font-weight:600}
+.nav-dot{font-size:11px;width:14px;text-align:center;flex-shrink:0;opacity:.6}
+.part-link{display:block;margin:8px 12px 4px;padding:7px 12px;border-radius:7px;border:1px solid var(--bd-s);background:var(--bg-c);font-size:12px;color:var(--tx-m);text-decoration:none;transition:all .14s}
+.part-link:hover{border-color:var(--ac);color:var(--ac);background:var(--ac-g)}
+.part-link span{display:block;font-size:10.5px;color:var(--tx-f);margin-top:2px}
+main{padding:40px 48px 100px;max-width:920px;overflow-x:hidden}
+.ph{margin-bottom:48px}
+.ph h1{font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1.2;margin-bottom:8px}
+.ph h1 em{font-style:normal;color:var(--ac)}
+.ph p{font-size:15px;color:var(--tx-m);max-width:620px;line-height:1.65}
+.meta{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.sec{margin-bottom:52px}
+.sec-hdr{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--bd-s)}
+.sec-num{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx-f);min-width:22px}
+.sec-icon{width:30px;height:30px;border-radius:7px;background:var(--ac-g);border:1px solid var(--ac-b);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.sec-hdr h2{font-size:19px;font-weight:700;letter-spacing:-.02em;color:var(--tx)}
+.sub{margin-bottom:26px}
+.sub h3{font-size:14px;font-weight:600;color:var(--tx);margin:20px 0 8px;display:flex;align-items:center;gap:8px}
+.sub h3::before{content:'';display:block;width:3px;height:13px;background:var(--ac);border-radius:2px;flex-shrink:0}
+p{color:var(--tx-m);margin-bottom:10px;line-height:1.75}
+p strong{color:var(--tx);font-weight:600}
+.cb{background:var(--bg-code);border:1px solid var(--bd);border-radius:10px;margin:12px 0;overflow:hidden;transition:background var(--tr),border-color var(--tr)}
+.cb-hdr{display:flex;align-items:center;justify-content:space-between;padding:7px 13px;background:color-mix(in srgb,var(--bg-code) 60%,var(--bd-s));border-bottom:1px solid var(--bd);font-size:11px;color:var(--tx-f);font-family:'IBM Plex Mono',monospace}
+.cb-dots{display:flex;gap:5px}
+.cb-dots span{width:9px;height:9px;border-radius:50%;background:var(--bd)}
+.cp{background:none;border:1px solid var(--bd);color:var(--tx-f);cursor:pointer;font-size:10px;padding:2px 7px;border-radius:4px;font-family:'IBM Plex Mono',monospace;transition:all .13s}
+.cp:hover{border-color:var(--ac);color:var(--ac)}
+.cp.ok{border-color:var(--ac2);color:var(--ac2)}
+pre{padding:14px 18px;overflow-x:auto;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.65;color:var(--tx)}
+pre::-webkit-scrollbar{height:3px}
+pre::-webkit-scrollbar-thumb{background:var(--scr);border-radius:3px}
+code{font-family:'IBM Plex Mono',monospace;font-size:.88em}
+p code,li code,td code{background:var(--bg-code);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;color:var(--tag-tx)}
+.kw{color:#ff7b72}.cm{color:#8b949e;font-style:italic}.sv{color:#a5d6ff}.fn{color:#d2a8ff}.op{color:#79c0ff}.ok{color:#3fb950}.er{color:#f85149}.nu{color:#ffa657}
+.tw{overflow-x:auto;margin:12px 0;border-radius:10px;border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:color-mix(in srgb,var(--ac) 7%,var(--bg-c))}
+thead th{padding:9px 13px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--tx-m);border-bottom:1px solid var(--bd);font-family:'IBM Plex Mono',monospace}
+tbody tr{border-bottom:1px solid var(--bd-s)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--ac-g)}
+td{padding:8px 13px;color:var(--tx-m);vertical-align:top}
+td:first-child{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--tag-tx)}
+.cal{border-radius:8px;padding:11px 15px;margin:12px 0;display:flex;gap:11px;font-size:13px;line-height:1.6}
+.cal-i{font-size:14px;flex-shrink:0;margin-top:1px}
+.cal-b{color:var(--tx-m)}
+.cal-b strong{color:var(--tx)}
+.cal.note{background:rgba(47,129,247,.08);border:1px solid rgba(47,129,247,.25)}
+.cal.note .cal-i{color:var(--ac)}
+.cal.warn{background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.30)}
+.cal.warn .cal-i{color:var(--aw)}
+.cal.good{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.25)}
+.cal.good .cal-i{color:var(--ac2)}
+.cal.err{background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.25)}
+.cal.err .cal-i{color:var(--ae)}
+ul{list-style:none;padding:0;margin:8px 0}
+ul li{padding:3px 0 3px 20px;position:relative;color:var(--tx-m);font-size:14px;line-height:1.65}
+ul li::before{content:'';position:absolute;left:4px;top:12px;width:5px;height:5px;border-radius:50%;background:var(--ac);opacity:.55}
+.steps{display:flex;flex-direction:column;margin:14px 0}
+.step{display:flex;gap:16px}
+.step-l{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.step-dot{width:26px;height:26px;border-radius:50%;background:var(--ac-g);border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ac);font-weight:700}
+.step-line{width:2px;flex:1;background:var(--bd-s);margin:4px 0;min-height:10px}
+.step-b{padding-bottom:18px;flex:1;min-width:0}
+.step-b h4{font-size:13px;font-weight:600;color:var(--tx);margin-bottom:5px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}
+.fi{background:var(--bg-c);border:1px solid var(--bd-s);border-radius:7px;padding:9px 11px;transition:border-color .13s}
+.fi:hover{border-color:var(--ac)}
+.fi .fk{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--tag-tx);margin-bottom:2px}
+.fi .fd{font-size:12px;color:var(--tx-m);line-height:1.45}
+.req{font-size:10px;color:var(--ae);margin-left:5px}
+.opt{font-size:10px;color:var(--tx-f);margin-left:5px}
+.xt{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+.xr{display:flex;align-items:center;gap:10px;padding:6px 11px;border-radius:6px;background:var(--bg-c);border:1px solid var(--bd-s);font-size:13px}
+.xc{font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:2px 8px;border-radius:4px;flex-shrink:0;min-width:24px;text-align:center}
+.xc.ok{background:rgba(63,185,80,.12);color:var(--ac2)}
+.xc.er{background:rgba(248,81,73,.12);color:var(--ae)}
+.xc.sy{background:rgba(210,153,34,.12);color:var(--aw)}
+.xd{color:var(--tx-m)}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--scr);border-radius:4px}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.sidebar{display:none}main{padding:22px 18px 60px}.fg{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="layout">
+<header class="topbar">
+  <a class="logo" href="#">
+    <div class="logo-mark">Pdf</div>
+    <span class="logo-name">PdfCreator</span>
+  </a>
+  <div class="tb-div"></div>
+  <span class="tb-sub">Part 1 of 2 — Generation, Reading &amp; Manipulation</span>
+  <div class="tb-right">
+    <span class="badge">PDFBox 3.0.2</span><span class="badge">Java 17+</span><span class="badge">Maven</span>
+    <button class="theme-btn" id="themeBtn">☀</button>
+  </div>
+</header>
+<nav class="sidebar">
+<div class="nav-group"><div class="nav-label">Overview</div><a class="nav-a" href="#s01"><span class="nav-dot">⬡</span>Overview & Modes</a></div><div class="nav-group"><div class="nav-label">Generation</div><a class="nav-a" href="#s02"><span class="nav-dot">⬡</span>Direct Mode</a><a class="nav-a" href="#s03"><span class="nav-dot">⬡</span>Template Mode</a><a class="nav-a" href="#s04"><span class="nav-dot">⬡</span>Batch Mode</a></div><div class="nav-group"><div class="nav-label">Reading PDFs</div><a class="nav-a" href="#s05"><span class="nav-dot">⬡</span>Text Extraction</a><a class="nav-a" href="#s06"><span class="nav-dot">⬡</span>Image Extraction</a></div><div class="nav-group"><div class="nav-label">Manipulation</div><a class="nav-a" href="#s07"><span class="nav-dot">⬡</span>Merge</a><a class="nav-a" href="#s08"><span class="nav-dot">⬡</span>Split</a></div><div class="nav-group"><div class="nav-label">Output</div><a class="nav-a" href="#s09"><span class="nav-dot">⬡</span>Printing</a><a class="nav-a" href="#s10"><span class="nav-dot">⬡</span>Rasterization</a></div><div class="nav-group"><div class="nav-label">Quick Reference</div><a class="nav-a" href="#s11"><span class="nav-dot">⬡</span>All Flags — Part 1</a><a class="nav-a" href="#s12"><span class="nav-dot">⬡</span>Quick Reference</a></div>
+  <div class="nav-group">
+    <div class="nav-label">Other Part</div>
+    <a class="part-link" href="PdfCreator-Usage-Guide-Part2.html">Part 2: Security, PDF/A &amp; AcroForms<span>Switch guide →</span></a>
+  </div>
+</nav>
+<main>
+<div id="s01" class="sec"><div class="sec-hdr"><span class="sec-num">01</span><div class="sec-icon">◈</div><h2>Overview &amp; Operating Modes</h2></div><div class="ph" style="margin-bottom:24px"><h1>Usage Guide <em>Part 1</em></h1><p>Document generation, text/image extraction, PDF manipulation, printing, and rasterization — all CLI operations that create or read PDF files.</p><div class="meta"><span class="badge">Apache PDFBox 3.0.2</span><span class="badge">Java 17+</span><span class="badge">Maven</span></div></div><div class="tw"><table><thead><tr><th>Mode</th><th>Primary Flag(s)</th><th>Covered In</th></tr></thead><tbody><tr><td>Direct</td><td>--title / --text / --text-file</td><td>Part 1 §02</td></tr><tr><td>Template</td><td>--template-id + --data-file</td><td>Part 1 §03</td></tr><tr><td>Batch</td><td>--batch + --data-dir or --csv-file</td><td>Part 1 §04</td></tr><tr><td>Extract (text)</td><td>--extract</td><td>Part 1 §05</td></tr><tr><td>Extract (images)</td><td>--extract-images</td><td>Part 1 §06</td></tr><tr><td>Merge</td><td>--merge</td><td>Part 1 §07</td></tr><tr><td>Split</td><td>--split</td><td>Part 1 §08</td></tr><tr><td>Print</td><td>--print / --list-printers</td><td>Part 1 §09</td></tr><tr><td>Rasterize</td><td>--rasterize</td><td>Part 1 §10</td></tr><tr><td>Encrypt / Decrypt</td><td>--encrypt / --decrypt / --inspect-security</td><td>Part 2 §01</td></tr><tr><td>Sign / Verify</td><td>--sign / --verify / --export-cert</td><td>Part 2 §02</td></tr><tr><td>PDF/A</td><td>--pdfa / --validate-pdfa</td><td>Part 2 §03–06</td></tr><tr><td>AcroForms</td><td>--generate-form / --extract-form / --fill-form</td><td>Part 2 §07–11</td></tr></tbody></table></div></div><div id="s02" class="sec"><div class="sec-hdr"><span class="sec-num">02</span><div class="sec-icon">✎</div><h2>Direct Mode</h2></div><p>The quickest way to produce a PDF — no template or data file required. Pass content inline via flags. Useful for cover pages, quick notes, or testing style presets.</p><div class="sub"><h3>Basic usage</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Title only</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--title</span> <span class="sv">"Q1 Account Summary"</span> <span class="kw">--output</span> <span class="sv">output/cover.pdf</span>
+
+<span class="cm"># Title + inline body text</span>
+<span class="fn">java -jar pdf-creator.jar</span> \
+  <span class="kw">--title</span>  <span class="sv">"Notice to Customer"</span> \
+  <span class="kw">--text</span>   <span class="sv">"Your account has been updated."</span> \
+  <span class="kw">--output</span> <span class="sv">output/notice.pdf</span>
+
+<span class="cm"># Body text from a file, with style preset</span>
+<span class="fn">java -jar pdf-creator.jar</span> \
+  <span class="kw">--title</span>     <span class="sv">"Annual Report 2026"</span> \
+  <span class="kw">--text-file</span> <span class="sv">content/report.txt</span> \
+  <span class="kw">--config-id</span> <span class="sv">report</span> \
+  <span class="kw">--output</span>    <span class="sv">output/annual-report.pdf</span></pre></div></div><div class="sub"><h3>Config presets (--config-id)</h3><div class="tw"><table><thead><tr><th>Preset ID</th><th>Page</th><th>Character</th></tr></thead><tbody><tr><td>default</td><td>A4</td><td>Helvetica, 50 pt margins, neutral black — all-purpose</td></tr><tr><td>report</td><td>A4</td><td>Wider margins (72 pt), navy title colour — formal reports</td></tr><tr><td>letter</td><td>Letter</td><td>Times Roman, generous margins — business correspondence</td></tr><tr><td>compact</td><td>A4</td><td>Courier, tight 30 pt margins — data-dense documents</td></tr><tr><td>dark</td><td>A4</td><td>Light text on #1E1E1E background — modern/digital look</td></tr><tr><td>branded</td><td>A4</td><td>White titles on navy background — brand cover pages</td></tr></tbody></table></div></div><div class="sub"><h3>Direct mode flags</h3><div class="tw"><table><thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td>--title &lt;text&gt;</td><td>Yes</td><td>Document title rendered as a large heading on page 1</td></tr><tr><td>--text &lt;text&gt;</td><td>No</td><td>Inline body text. Use \n for paragraph breaks</td></tr><tr><td>--text-file &lt;path&gt;</td><td>No</td><td>Read body text from a plain-text file</td></tr><tr><td>--output &lt;path&gt;</td><td>Yes</td><td>Output PDF file path</td></tr><tr><td>--config-id &lt;id&gt;</td><td>No</td><td>Style preset name. Default: default</td></tr><tr><td>--config-file &lt;path&gt;</td><td>No</td><td>Path to pdf-configs.json. Default: configs/pdf-configs.json</td></tr><tr><td>--author &lt;text&gt;</td><td>No</td><td>Document author metadata</td></tr><tr><td>--subject &lt;text&gt;</td><td>No</td><td>Document subject metadata</td></tr></tbody></table></div></div></div><div id="s03" class="sec"><div class="sec-hdr"><span class="sec-num">03</span><div class="sec-icon">⊞</div><h2>Template Mode</h2></div><p>Combines a JSON template (structure &amp; layout) with a JSON data file (runtime values). Placeholders in the template — <code>{{customer.name}}</code> — are resolved against the data before rendering. Missing keys produce a warning; rendering does not fail.</p><div class="sub"><h3>Usage</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> \
+  <span class="kw">--template-id</span> <span class="sv">bank-statement</span> \
+  <span class="kw">--data-file</span>   <span class="sv">data/statements/statement-001.json</span> \
+  <span class="kw">--output</span>      <span class="sv">output/statement-001.pdf</span>
+
+<span class="cm"># Override config preset and add metadata</span>
+<span class="fn">java -jar pdf-creator.jar</span> \
+  <span class="kw">--template-id</span> <span class="sv">credit-card-summary</span> \
+  <span class="kw">--data-file</span>   <span class="sv">data/cards/card-007.json</span> \
+  <span class="kw">--config-id</span>   <span class="sv">compact</span> \
+  <span class="kw">--output</span>      <span class="sv">output/card-007.pdf</span> \
+  <span class="kw">--title</span>       <span class="sv">"Card Statement March 2026"</span> \
+  <span class="kw">--author</span>      <span class="sv">"First National Bank"</span></pre></div></div><div class="sub"><h3>Section types</h3><div class="tw"><table><thead><tr><th>Type</th><th>Rendered As</th><th>Key Template Fields</th></tr></thead><tbody><tr><td>HEADING</td><td>Large bold text with bottom underline</td><td>content</td></tr><tr><td>SUBHEADING</td><td>Medium bold text</td><td>content</td></tr><tr><td>BODY</td><td>Word-wrapped paragraph, paginated</td><td>content (\n = paragraph break)</td></tr><tr><td>DIVIDER</td><td>Full-width horizontal rule</td><td>—</td></tr><tr><td>SPACER</td><td>Vertical whitespace gap</td><td>—</td></tr><tr><td>IMAGE</td><td>Embedded image file</td><td>content (path), align, widthPercent</td></tr><tr><td>TABLE</td><td>Variable-length data table</td><td>dataKey, columns[], headerBgColor, alternateRowColor</td></tr><tr><td>SUMMARY</td><td>Fixed key-value grid (2-col)</td><td>summaryItems[] — each has label + dataKey</td></tr><tr><td>NOTICE</td><td>Boxed text with background fill</td><td>content, bgColor</td></tr><tr><td>COLUMNS</td><td>Two-column side-by-side block</td><td>left[], right[], leftWidthPct</td></tr><tr><td>PAGEBREAK</td><td>Forces next section to new page</td><td>—</td></tr><tr><td>FORM</td><td>Interactive AcroForm field block</td><td>formData (FormSection) — see Part 2 §07</td></tr></tbody></table></div></div><div class="sub"><h3>Template mode flags</h3><div class="tw"><table><thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td>--template-id &lt;id&gt;</td><td>Yes</td><td>Template name as defined in pdf-templates.json</td></tr><tr><td>--data-file &lt;path&gt;</td><td>Yes</td><td>JSON data file supplying values for {{placeholders}}</td></tr><tr><td>--output &lt;path&gt;</td><td>Yes</td><td>Output PDF file path</td></tr><tr><td>--config-id &lt;id&gt;</td><td>No</td><td>Override the config preset defined in the template</td></tr><tr><td>--title / --author / --subject</td><td>No</td><td>Override document metadata fields</td></tr><tr><td>--template-file &lt;path&gt;</td><td>No</td><td>Path to pdf-templates.json. Default: templates/pdf-templates.json</td></tr></tbody></table></div></div></div><div id="s04" class="sec"><div class="sec-hdr"><span class="sec-num">04</span><div class="sec-icon">⊕</div><h2>Batch Mode</h2></div><p>Generates many personalised PDFs in parallel using a thread pool. Every job uses the same template with a different data file. Signing and PDF/A compliance can be layered on in the same pass.</p><div class="sub"><h3>From a directory of JSON files</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> \
+  <span class="kw">--batch</span> \
+  <span class="kw">--template-id</span> <span class="sv">bank-statement</span> \
+  <span class="kw">--data-dir</span>    <span class="sv">data/statements/</span> \
+  <span class="kw">--output-dir</span>  <span class="sv">output/statements/</span> \
+  <span class="kw">--threads</span>     <span class="sv">8</span></pre></div></div><div class="sub"><h3>From a CSV file</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> \
+  <span class="kw">--batch</span> \
+  <span class="kw">--template-id</span> <span class="sv">credit-card-summary</span> \
+  <span class="kw">--csv-file</span>    <span class="sv">data/march-accounts.csv</span> \
+  <span class="kw">--output-dir</span>  <span class="sv">output/march/</span> \
+  <span class="kw">--threads</span>     <span class="sv">4</span></pre></div><div class="cal note"><span class="cal-i">ℹ</span><div class="cal-b">CSV column headers become placeholder keys. Each row generates one PDF. Output filenames are derived from the row index unless the data includes a <code>filename</code> column.</div></div></div><div class="sub"><h3>Batch + PDF/A + sign in one pass</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> \
+  <span class="kw">--batch</span> \
+  <span class="kw">--template-id</span>       <span class="sv">bank-statement</span> \
+  <span class="kw">--data-dir</span>          <span class="sv">data/statements/</span> \
+  <span class="kw">--output-dir</span>        <span class="sv">output/signed/</span> \
+  <span class="kw">--threads</span>           <span class="sv">4</span> \
+  <span class="kw">--pdfa</span> \
+  <span class="kw">--sign</span> \
+  <span class="kw">--keystore</span>          <span class="sv">bank.p12</span> \
+  <span class="kw">--keystore-password</span> <span class="sv">secret</span> \
+  <span class="kw">--reason</span>            <span class="sv">"Monthly Account Statement"</span> \
+  <span class="kw">--tsa-url</span>           <span class="sv">http://timestamp.digicert.com</span></pre></div><div class="cal note"><span class="cal-i">ℹ</span><div class="cal-b">Each PDF is generated, PDF/A markers are attached, then it is digitally signed — all in the same pipeline pass. The unsigned intermediate file is never written to disk.</div></div></div><div class="sub"><h3>Batch flags</h3><div class="tw"><table><thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td>--batch</td><td>Yes</td><td>Activates batch mode</td></tr><tr><td>--template-id &lt;id&gt;</td><td>Yes</td><td>Template applied to every job</td></tr><tr><td>--data-dir &lt;path&gt;</td><td>One of</td><td>Directory of .json files — one file = one job</td></tr><tr><td>--csv-file &lt;path&gt;</td><td>One of</td><td>CSV file — one row = one job; headers become placeholder keys</td></tr><tr><td>--output-dir &lt;path&gt;</td><td>Yes</td><td>Output directory. Created if absent. Filenames match input stems</td></tr><tr><td>--threads &lt;n&gt;</td><td>No</td><td>Thread pool size. Default: number of CPU cores</td></tr><tr><td>--config-id &lt;id&gt;</td><td>No</td><td>Override config preset for all jobs</td></tr><tr><td>--pdfa</td><td>No</td><td>Attach PDF/A-1b compliance markers to every output — see Part 2</td></tr><tr><td>--sign</td><td>No</td><td>Enables signing for every output. Requires <code>--keystore</code> and <code>--keystore-password</code></td></tr><tr><td>--keystore &lt;path&gt;</td><td>With --sign</td><td>PKCS#12 (.p12) keystore file</td></tr><tr><td>--keystore-password &lt;pwd&gt;</td><td>With --sign</td><td>Keystore password</td></tr><tr><td>--keystore-type &lt;t&gt;</td><td>No</td><td>PKCS12 (default) or JKS</td></tr><tr><td>--alias &lt;name&gt;</td><td>No</td><td>Key alias. Default: first alias in keystore</td></tr><tr><td>--reason &lt;text&gt;</td><td>No</td><td>Signing reason embedded in the signature</td></tr><tr><td>--location &lt;text&gt;</td><td>No</td><td>Signing location embedded in the signature</td></tr><tr><td>--contact &lt;email&gt;</td><td>No</td><td>Contact info embedded in the signature</td></tr><tr><td>--signer-name &lt;n&gt;</td><td>No</td><td>Display name. Default: certificate CN</td></tr><tr><td>--tsa-url &lt;url&gt;</td><td>No</td><td>RFC 3161 TSA endpoint for a trusted timestamp</td></tr><tr><td>--visible</td><td>No</td><td>Render a visible signature box on every signed page</td></tr><tr><td>--sig-page &lt;n&gt;</td><td>No</td><td>Page for the visible box. Default: last page</td></tr><tr><td>--sig-x / --sig-y</td><td>No</td><td>Bottom-left corner of the signature box in points. Default: 50, 50</td></tr><tr><td>--sig-width / --sig-height</td><td>No</td><td>Dimensions of the signature box. Default: 200 × 60 pt</td></tr></tbody></table></div></div></div><div id="s05" class="sec"><div class="sec-hdr"><span class="sec-num">05</span><div class="sec-icon">⊙</div><h2>Text Extraction</h2></div><p>Extracts text from any existing PDF using PDFBox's <code>PDFTextStripper</code>. Supports page ranges, position-based sorting, whitespace normalisation, per-page output, and password-protected PDFs.</p><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Extract all text to stdout</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract</span> <span class="kw">--input</span> <span class="sv">report.pdf</span>
+
+<span class="cm"># Pages 2–5, write to file</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract</span> \
+  <span class="kw">--input</span>      <span class="sv">report.pdf</span> \
+  <span class="kw">--output</span>     <span class="sv">report.txt</span> \
+  <span class="kw">--start-page</span> <span class="nu">2</span> <span class="kw">--end-page</span> <span class="nu">5</span>
+
+<span class="cm"># Strip extra whitespace, suppress metadata header</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract</span> \
+  <span class="kw">--input</span>           <span class="sv">report.pdf</span> \
+  <span class="kw">--strip-whitespace</span> \
+  <span class="kw">--no-metadata</span>
+
+<span class="cm"># Password-protected PDF</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract</span> \
+  <span class="kw">--input</span>    <span class="sv">secured.pdf</span> \
+  <span class="kw">--password</span> <span class="sv">userpass</span></pre></div><div class="tw"><table><thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td>--extract</td><td>—</td><td>Activates text extraction mode</td></tr><tr><td>--input &lt;path&gt;</td><td>—</td><td>Source PDF (required)</td></tr><tr><td>--output &lt;path&gt;</td><td>stdout</td><td>Destination text file</td></tr><tr><td>--start-page &lt;n&gt;</td><td>1</td><td>First page, 1-based</td></tr><tr><td>--end-page &lt;n&gt;</td><td>last</td><td>Last page. -1 = last page</td></tr><tr><td>--sort-by-position</td><td>true</td><td>Sort text fragments by Y/X coordinates before output</td></tr><tr><td>--strip-whitespace</td><td>false</td><td>Collapse multiple spaces and trim each line</td></tr><tr><td>--no-metadata</td><td>false</td><td>Suppress the document information dictionary in output</td></tr><tr><td>--password &lt;pwd&gt;</td><td>—</td><td>Password for encrypted PDFs (tried as both user and owner)</td></tr></tbody></table></div></div><div id="s06" class="sec"><div class="sec-hdr"><span class="sec-num">06</span><div class="sec-icon">⊙</div><h2>Image Extraction</h2></div><p>Iterates all pages using <code>PDResources.getXObjectNames()</code> and saves every <code>PDImageXObject</code> to the output directory. Use minimum dimension filters to skip tiny decorative elements like icons or rule lines.</p><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Extract all embedded images</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract</span> <span class="kw">--extract-images</span> \
+  <span class="kw">--input</span>      <span class="sv">report.pdf</span> \
+  <span class="kw">--output-dir</span> <span class="sv">images/</span>
+
+<span class="cm"># Only images ≥ 100×100 px, saved as JPEG</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract</span> <span class="kw">--extract-images</span> \
+  <span class="kw">--input</span>        <span class="sv">report.pdf</span> \
+  <span class="kw">--output-dir</span>   <span class="sv">images/</span> \
+  <span class="kw">--image-format</span> <span class="sv">jpeg</span> \
+  <span class="kw">--min-width</span>    <span class="nu">100</span> \
+  <span class="kw">--min-height</span>   <span class="nu">100</span>
+
+<span class="cm"># Extract images from pages 3–7 only</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract</span> <span class="kw">--extract-images</span> \
+  <span class="kw">--input</span>      <span class="sv">report.pdf</span> \
+  <span class="kw">--output-dir</span> <span class="sv">images/</span> \
+  <span class="kw">--start-page</span> <span class="nu">3</span> <span class="kw">--end-page</span> <span class="nu">7</span></pre></div><div class="tw"><table><thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td>--extract-images</td><td>—</td><td>Activates image extraction (combine with --extract)</td></tr><tr><td>--output-dir &lt;path&gt;</td><td>—</td><td>Directory for extracted images (required)</td></tr><tr><td>--image-format &lt;fmt&gt;</td><td>png</td><td>png or jpeg</td></tr><tr><td>--min-width &lt;px&gt;</td><td>0</td><td>Skip images narrower than this pixel count</td></tr><tr><td>--min-height &lt;px&gt;</td><td>0</td><td>Skip images shorter than this pixel count</td></tr><tr><td>--start-page / --end-page</td><td>all</td><td>Limit extraction to a page range</td></tr><tr><td>--password &lt;pwd&gt;</td><td>—</td><td>Password for encrypted PDFs</td></tr></tbody></table></div></div><div id="s07" class="sec"><div class="sec-hdr"><span class="sec-num">07</span><div class="sec-icon">⊞</div><h2>Merge</h2></div><p>Combines two or more PDFs into a single output using PDFBox's <code>appendDocument()</code> API. All page content, bookmarks, and metadata are preserved from each source. Input order determines page order in the output.</p><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--merge</span> \
+  <span class="kw">--input</span>  cover.pdf report.pdf appendix.pdf \
+  <span class="kw">--output</span> <span class="sv">combined.pdf</span></pre></div><div class="tw"><table><thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td>--merge</td><td>Yes</td><td>Activates merge mode</td></tr><tr><td>--input &lt;p1&gt; &lt;p2&gt; …</td><td>Yes</td><td>Two or more source PDFs in merge order</td></tr><tr><td>--output &lt;path&gt;</td><td>Yes</td><td>Output PDF file path</td></tr></tbody></table></div><div class="cal note"><span class="cal-i">ℹ</span><div class="cal-b">When at least one input is PDF/A, the merged output automatically inherits PDF/A compliance markers and the sRGB output intent.</div></div></div><div id="s08" class="sec"><div class="sec-hdr"><span class="sec-num">08</span><div class="sec-icon">⊟</div><h2>Split</h2></div><p>Divides one PDF into multiple output files. Three strategies are available via <code>--split-mode</code>. Each output part inherits PDF/A markers from the source if present.</p><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># every-n  — split into chunks of 5 pages</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--split</span> \
+  <span class="kw">--input</span>          <span class="sv">big-batch.pdf</span> \
+  <span class="kw">--output-dir</span>     <span class="sv">parts/</span> \
+  <span class="kw">--split-mode</span>     <span class="sv">every-n</span> \
+  <span class="kw">--pages-per-part</span> <span class="nu">5</span>
+
+<span class="cm"># into-n  — divide into exactly 3 equal parts</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--split</span> \
+  <span class="kw">--input</span>      <span class="sv">report.pdf</span> \
+  <span class="kw">--output-dir</span> <span class="sv">parts/</span> \
+  <span class="kw">--split-mode</span> <span class="sv">into-n</span> \
+  <span class="kw">--num-parts</span>  <span class="nu">3</span>
+
+<span class="cm"># page-range  — extract pages 3–7</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--split</span> \
+  <span class="kw">--input</span>      <span class="sv">report.pdf</span> \
+  <span class="kw">--output-dir</span> <span class="sv">parts/</span> \
+  <span class="kw">--start-page</span> <span class="nu">3</span> <span class="kw">--end-page</span> <span class="nu">7</span></pre></div><div class="tw"><table><thead><tr><th>--split-mode</th><th>Description</th><th>Required extra flag</th></tr></thead><tbody><tr><td>every-n</td><td>Divide into chunks of N pages. Last chunk may have fewer.</td><td>--pages-per-part &lt;n&gt;</td></tr><tr><td>into-n</td><td>Divide into exactly N approximately equal parts.</td><td>--num-parts &lt;n&gt;</td></tr><tr><td>(range)</td><td>Extract a specific page range using start/end page flags.</td><td>--start-page + --end-page</td></tr></tbody></table></div></div><div id="s09" class="sec"><div class="sec-hdr"><span class="sec-num">09</span><div class="sec-icon">⊡</div><h2>Printing</h2></div><p>Sends a PDF to any printer accessible to the JVM via the Java Printing API (<code>javax.print</code>). Supports silent printing, duplex modes, page range, copy count, and three scaling modes.</p><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># List all available printers</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--list-printers</span>
+
+<span class="cm"># Print silently to the system default printer</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--print</span> <span class="kw">--input</span> <span class="sv">statement.pdf</span>
+
+<span class="cm"># Named printer, pages 1–3, duplex long-edge, 2 copies</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--print</span> \
+  <span class="kw">--input</span>      <span class="sv">statement.pdf</span> \
+  <span class="kw">--printer</span>    <span class="sv">"Finance-HP-4015"</span> \
+  <span class="kw">--start-page</span> <span class="nu">1</span> <span class="kw">--end-page</span> <span class="nu">3</span> \
+  <span class="kw">--sides</span>      <span class="sv">duplex-long</span> \
+  <span class="kw">--copies</span>     <span class="nu">2</span> \
+  <span class="kw">--silent</span></pre></div><div class="tw"><table><thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td>--print</td><td>—</td><td>Activates print mode</td></tr><tr><td>--list-printers</td><td>—</td><td>Print names of all available printers and exit</td></tr><tr><td>--input &lt;path&gt;</td><td>—</td><td>PDF file to print (required)</td></tr><tr><td>--printer &lt;name&gt;</td><td>system default</td><td>Printer name from --list-printers output</td></tr><tr><td>--start-page &lt;n&gt;</td><td>1</td><td>First page to print, 1-based</td></tr><tr><td>--end-page &lt;n&gt;</td><td>last</td><td>Last page to print</td></tr><tr><td>--copies &lt;n&gt;</td><td>1</td><td>Number of copies</td></tr><tr><td>--sides &lt;mode&gt;</td><td>simplex</td><td>simplex | duplex-long | duplex-short</td></tr><tr><td>--scaling &lt;mode&gt;</td><td>fit</td><td>fit | shrink | actual</td></tr><tr><td>--silent</td><td>false</td><td>Print without showing a dialog box</td></tr><tr><td>--password &lt;pwd&gt;</td><td>—</td><td>Password for encrypted PDFs</td></tr></tbody></table></div></div><div id="s10" class="sec"><div class="sec-hdr"><span class="sec-num">10</span><div class="sec-icon">⬡</div><h2>Rasterization</h2></div><p>Renders PDF pages to PNG or JPEG image files using PDFBox's <code>PDFRenderer.renderImageWithDPI()</code>. Output files are named <code>&lt;prefix&gt;-001.png</code>, <code>&lt;prefix&gt;-002.png</code>, etc. — zero-padded to at least 3 digits, auto-expanding for documents over 999 pages.</p><div class="sub"><h3>Usage</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># All pages to PNG at 150 DPI (default)</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--rasterize</span> \
+  <span class="kw">--input</span>      <span class="sv">statement.pdf</span> \
+  <span class="kw">--output-dir</span> <span class="sv">statement-pages/</span>
+
+<span class="cm"># Print-quality PNG at 300 DPI</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--rasterize</span> \
+  <span class="kw">--input</span>      <span class="sv">statement.pdf</span> \
+  <span class="kw">--output-dir</span> <span class="sv">pages/</span> \
+  <span class="kw">--dpi</span>        <span class="nu">300</span>
+
+<span class="cm"># Pages 1–3 as JPEG at 90% quality</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--rasterize</span> \
+  <span class="kw">--input</span>        <span class="sv">statement.pdf</span> \
+  <span class="kw">--output-dir</span>   <span class="sv">previews/</span> \
+  <span class="kw">--format</span>       <span class="sv">jpeg</span> \
+  <span class="kw">--dpi</span>          <span class="nu">200</span> \
+  <span class="kw">--jpeg-quality</span> <span class="nu">0.90</span> \
+  <span class="kw">--start-page</span>   <span class="nu">1</span> <span class="kw">--end-page</span> <span class="nu">3</span>
+
+<span class="cm"># First-page thumbnail with custom filename prefix</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--rasterize</span> \
+  <span class="kw">--input</span>       <span class="sv">statement.pdf</span> \
+  <span class="kw">--output-dir</span>  <span class="sv">thumbnails/</span> \
+  <span class="kw">--dpi</span>         <span class="nu">72</span> \
+  <span class="kw">--start-page</span>  <span class="nu">1</span> <span class="kw">--end-page</span> <span class="nu">1</span> \
+  <span class="kw">--file-prefix</span> <span class="sv">thumb</span></pre></div></div><div class="sub"><h3>DPI guide</h3><div class="tw"><table><thead><tr><th>DPI</th><th>Use Case</th></tr></thead><tbody><tr><td>72</td><td>Screen thumbnails and small previews — smallest files</td></tr><tr><td>150</td><td>Default — good for on-screen reading and email attachments</td></tr><tr><td>300</td><td>Print quality — recommended for customer-facing document previews</td></tr><tr><td>600</td><td>Archival or OCR pre-processing</td></tr></tbody></table></div></div><div class="sub"><h3>Rasterize flags</h3><div class="tw"><table><thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td>--rasterize</td><td>—</td><td>Activates rasterization mode</td></tr><tr><td>--input &lt;path&gt;</td><td>—</td><td>Source PDF (required)</td></tr><tr><td>--output-dir &lt;path&gt;</td><td>—</td><td>Directory for output images; created if absent (required)</td></tr><tr><td>--format &lt;fmt&gt;</td><td>png</td><td>png or jpeg</td></tr><tr><td>--dpi &lt;n&gt;</td><td>150</td><td>Rendering resolution in dots per inch</td></tr><tr><td>--jpeg-quality &lt;n&gt;</td><td>0.85</td><td>JPEG quality 0.0–1.0. Ignored for PNG</td></tr><tr><td>--start-page &lt;n&gt;</td><td>1</td><td>First page to render, 1-based</td></tr><tr><td>--end-page &lt;n&gt;</td><td>last</td><td>Last page to render</td></tr><tr><td>--file-prefix &lt;s&gt;</td><td>page</td><td>Filename prefix — output named &lt;prefix&gt;-NNN.ext</td></tr><tr><td>--password &lt;pwd&gt;</td><td>—</td><td>Password for encrypted PDFs</td></tr></tbody></table></div></div></div><div id="s11" class="sec"><div class="sec-hdr"><span class="sec-num">11</span><div class="sec-icon">◈</div><h2>All Flags — Part 1 Summary</h2></div><div class="sub"><h3>Common to all modes</h3><div class="tw"><table><thead><tr><th>Flag</th><th>Description</th></tr></thead><tbody><tr><td>--config-id &lt;id&gt;</td><td>Style preset. One of: default, report, letter, compact, dark, branded</td></tr><tr><td>--config-file &lt;path&gt;</td><td>Path to pdf-configs.json</td></tr><tr><td>--template-file &lt;path&gt;</td><td>Path to pdf-templates.json</td></tr><tr><td>--output / --output-dir</td><td>Output file or directory path</td></tr><tr><td>--input</td><td>Source PDF path (for read/transform modes)</td></tr><tr><td>--start-page / --end-page</td><td>1-based inclusive page range. -1 = last page</td></tr><tr><td>--password &lt;pwd&gt;</td><td>Password for reading encrypted PDFs</td></tr></tbody></table></div></div><div class="sub"><h3>Generation flags at a glance</h3><div class="tw"><table><thead><tr><th>Mode</th><th>Key Flags</th></tr></thead><tbody><tr><td>Direct</td><td>--title, --text, --text-file, --config-id, --output</td></tr><tr><td>Template</td><td>--template-id, --data-file, --config-id, --output</td></tr><tr><td>Batch</td><td>--batch, --template-id, --data-dir OR --csv-file, --output-dir, --threads</td></tr></tbody></table></div></div><div class="sub"><h3>Read &amp; transform flags at a glance</h3><div class="tw"><table><thead><tr><th>Mode</th><th>Key Flags</th></tr></thead><tbody><tr><td>Text extraction</td><td>--extract, --input, --output, --start-page, --end-page, --sort-by-position, --strip-whitespace, --no-metadata</td></tr><tr><td>Image extraction</td><td>--extract, --extract-images, --input, --output-dir, --image-format, --min-width, --min-height</td></tr><tr><td>Merge</td><td>--merge, --input (multiple), --output</td></tr><tr><td>Split</td><td>--split, --input, --output-dir, --split-mode, --pages-per-part OR --num-parts</td></tr><tr><td>Print</td><td>--print OR --list-printers, --input, --printer, --sides, --copies, --scaling, --silent</td></tr><tr><td>Rasterize</td><td>--rasterize, --input, --output-dir, --format, --dpi, --jpeg-quality, --file-prefix</td></tr></tbody></table></div></div></div><div id="s12" class="sec"><div class="sec-hdr"><span class="sec-num">12</span><div class="sec-icon">⚡</div><h2>Quick Reference — Part 1</h2></div><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash — generation</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Direct: simplest possible PDF</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--title</span> <span class="sv">"My Document"</span> <span class="kw">--output</span> <span class="sv">out.pdf</span>
+
+<span class="cm"># Template + data</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--template-id</span> &lt;id&gt; <span class="kw">--data-file</span> &lt;json&gt; <span class="kw">--output</span> &lt;pdf&gt;
+
+<span class="cm"># Batch from directory, 8 threads</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--batch</span> <span class="kw">--template-id</span> &lt;id&gt; <span class="kw">--data-dir</span> &lt;dir&gt; <span class="kw">--output-dir</span> &lt;out&gt; <span class="kw">--threads</span> <span class="nu">8</span>
+
+<span class="cm"># Batch from CSV</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--batch</span> <span class="kw">--template-id</span> &lt;id&gt; <span class="kw">--csv-file</span> &lt;csv&gt; <span class="kw">--output-dir</span> &lt;out&gt;</pre></div><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash — reading & manipulation</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Extract text (all pages)</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract</span> <span class="kw">--input</span> &lt;pdf&gt;
+
+<span class="cm"># Extract images with size filter</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract</span> <span class="kw">--extract-images</span> <span class="kw">--input</span> &lt;pdf&gt; <span class="kw">--output-dir</span> &lt;dir&gt; <span class="kw">--min-width</span> <span class="nu">100</span>
+
+<span class="cm"># Merge 3 PDFs</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--merge</span> <span class="kw">--input</span> a.pdf b.pdf c.pdf <span class="kw">--output</span> <span class="sv">combined.pdf</span>
+
+<span class="cm"># Split every 5 pages</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--split</span> <span class="kw">--input</span> &lt;pdf&gt; <span class="kw">--output-dir</span> &lt;dir&gt; <span class="kw">--split-mode</span> every-n <span class="kw">--pages-per-part</span> <span class="nu">5</span>
+
+<span class="cm"># List printers, then print silently</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--list-printers</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--print</span> <span class="kw">--input</span> &lt;pdf&gt; <span class="kw">--printer</span> &lt;name&gt; <span class="kw">--silent</span>
+
+<span class="cm"># Rasterize all pages to PNG at 300 DPI</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--rasterize</span> <span class="kw">--input</span> &lt;pdf&gt; <span class="kw">--output-dir</span> &lt;dir&gt; <span class="kw">--dpi</span> <span class="nu">300</span></pre></div></div>
+</main>
+</div>
+<script>
+const T=document.getElementById('themeBtn'),H=document.documentElement;
+function setTheme(t){H.setAttribute('data-theme',t);T.textContent=t==='dark'?'☀':'☾';try{localStorage.setItem('pc-theme',t)}catch(e){}}
+try{const s=localStorage.getItem('pc-theme');if(s)setTheme(s)}catch(e){}
+T.addEventListener('click',()=>setTheme(H.getAttribute('data-theme')==='dark'?'light':'dark'));
+function cp(btn){const pre=btn.closest('.cb').querySelector('pre');
+navigator.clipboard.writeText(pre.innerText).then(()=>{btn.textContent='copied!';btn.classList.add('ok');setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok')},1800)})}
+const secs=document.querySelectorAll('main [id]'),links=document.querySelectorAll('.nav-a');
+new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=document.querySelector('.nav-a[href="#'+e.target.id+'"]');if(a)a.classList.add('active')}})},{rootMargin:'-52px 0px -70% 0px'}).observe&&secs.forEach(s=>new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=document.querySelector('.nav-a[href="#'+e.target.id+'"]');if(a)a.classList.add('active')}})},{rootMargin:'-52px 0px -70% 0px'}).observe(s));
+</script>
+</body>
+</html>

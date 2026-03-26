@@ -294,3 +294,62 @@ java -jar target/pdf-creator-1.0-SNAPSHOT.jar --rasterize \
     --output-dir output/thumbnails/ \
     --dpi 72 --start-page 1 --end-page 1 \
     --file-prefix thumb
+
+# PDFA Related Usage 
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
+  --template-id bank-statement \
+  --data-file data/statements/CUST-001.json \
+  --output output/statement-001.pdf \
+  --pdfa
+
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
+  --validate \
+  --input output/statement-002.pdf
+
+# Create a pdf with interactive acroform fields 
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --generate-form \
+  --output output/loan-application.pdf \
+  --title "Loan Application Form" \
+  --config-id "default" \
+  --field "name=fullName,type=text,label=Full Name,required,tooltip=Enter your legal name" \
+  --field "name=email,type=text,label=Email Address,required" \
+  --field "name=address,type=multiline,label=Residential Address,rows=3" \
+  --field "name=loanType,type=combo,label=Loan Type,options=Personal|Home|Auto|Education,default=Personal" \
+  --field "name=repayment,type=radio,label=Repayment Frequency,options=Monthly|Quarterly|Annual" \
+  --field "name=branch,type=listbox,label=Preferred Branch,options=Chennai|Mumbai|Delhi|Bangalore" \
+  --field "name=consent,type=checkbox,label=I agree to the terms and conditions,default=Yes" \
+  --field "name=notes,type=multiline,label=Additional Notes,rows=4,readonly"
+
+# Extracting from the form 
+java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract-form \
+  --input output/loan-application.pdf
+
+# Step 1 — generate a blank form
+java -jar pdf-creator.jar --generate-form \
+  --output output/loan-application.pdf \
+  --title "Loan Application" \
+  --field "name=fullName,type=text,label=Full Name,required" \
+  --field "name=loanType,type=combo,label=Loan Type,options=Personal|Home|Auto" \
+  --field "name=consent,type=checkbox,label=I agree to the terms"
+
+# Step 2 — inspect what fields are available
+java -jar pdf-creator.jar --extract-form \
+  --input output/loan-application.pdf \
+  --output output/loan-fields.json
+
+# Step 3 — fill it with applicant data
+java -jar pdf-creator.jar --fill-form \
+  --input output/loan-application.pdf \
+  --output output/loan-filled.pdf \
+  --field "name=fullName,value=Arjun Kumar" \
+  --field "name=loanType,value=Home" \
+  --field "name=consent,value=Yes"
+
+# Step 4 — flatten for final archival copy
+java -jar pdf-creator.jar --fill-form \
+  --input output/loan-filled.pdf \
+  --output output/loan-final.pdf \
+  --field "name=fullName,value=Arjun Kumar" \
+  --field "name=loanType,value=Home" \
+  --field "name=consent,value=Yes" \
+  --flatten

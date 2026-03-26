@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PdfCreator — Usage Guide Part 2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+:root{--tr:0.2s ease}
+[data-theme="dark"]{--bg:#0d1117;--bg-s:#161b22;--bg-c:#1c2128;--bg-code:#13191f;--bd:#30363d;--bd-s:#21262d;--tx:#e6edf3;--tx-m:#8b949e;--tx-f:#484f58;--ac:#2f81f7;--ac-g:rgba(47,129,247,.14);--ac-b:rgba(47,129,247,.28);--ac2:#3fb950;--aw:#d29922;--ae:#f85149;--tag-bg:rgba(47,129,247,.12);--tag-tx:#79c0ff;--scr:#30363d}
+[data-theme="light"]{--bg:#f6f8fa;--bg-s:#ffffff;--bg-c:#ffffff;--bg-code:#f0f2f4;--bd:#d0d7de;--bd-s:#e8ecef;--tx:#1f2328;--tx-m:#57606a;--tx-f:#bbc1c8;--ac:#0969da;--ac-g:rgba(9,105,218,.10);--ac-b:rgba(9,105,218,.25);--ac2:#1a7f37;--aw:#9a6700;--ae:#cf222e;--tag-bg:rgba(9,105,218,.08);--tag-tx:#0969da;--scr:#d0d7de}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans',sans-serif;font-size:15px;line-height:1.7;background:var(--bg);color:var(--tx);transition:background var(--tr),color var(--tr);min-height:100vh}
+.layout{display:grid;grid-template-columns:264px 1fr;grid-template-rows:52px 1fr;min-height:100vh}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 24px;background:var(--bg-s);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:200;transition:background var(--tr),border-color var(--tr)}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.logo-mark{width:28px;height:28px;background:var(--ac);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:#fff;box-shadow:0 0 12px var(--ac-g)}
+.logo-name{font-weight:700;font-size:15px;color:var(--tx);letter-spacing:-.01em}
+.tb-div{width:1px;height:20px;background:var(--bd);flex-shrink:0}
+.tb-sub{font-size:12px;color:var(--tx-m);font-family:'IBM Plex Mono',monospace}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.badge{font-size:11px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:20px;background:var(--tag-bg);color:var(--tag-tx);border:1px solid var(--ac-b)}
+.theme-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:var(--bg-c);color:var(--tx-m);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--tr);font-size:16px}
+.theme-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--ac-g)}
+.sidebar{background:var(--bg-s);border-right:1px solid var(--bd);position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;padding:16px 0;transition:background var(--tr),border-color var(--tr)}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--scr);border-radius:3px}
+.nav-group{margin-bottom:4px}
+.nav-label{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--tx-f);padding:10px 18px 4px}
+.nav-a{display:flex;align-items:center;gap:8px;padding:5px 18px;font-size:13px;color:var(--tx-m);text-decoration:none;border-left:2px solid transparent;transition:all .14s;border-radius:0 6px 6px 0;margin-right:8px;white-space:nowrap}
+.nav-a:hover{color:var(--tx);background:var(--ac-g);border-left-color:var(--ac)}
+.nav-a.active{color:var(--ac);background:var(--ac-g);border-left-color:var(--ac);font-weight:600}
+.nav-dot{font-size:11px;width:14px;text-align:center;flex-shrink:0;opacity:.6}
+.part-link{display:block;margin:8px 12px 4px;padding:7px 12px;border-radius:7px;border:1px solid var(--bd-s);background:var(--bg-c);font-size:12px;color:var(--tx-m);text-decoration:none;transition:all .14s}
+.part-link:hover{border-color:var(--ac);color:var(--ac);background:var(--ac-g)}
+.part-link span{display:block;font-size:10.5px;color:var(--tx-f);margin-top:2px}
+main{padding:40px 48px 100px;max-width:920px;overflow-x:hidden}
+.ph{margin-bottom:48px}
+.ph h1{font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1.2;margin-bottom:8px}
+.ph h1 em{font-style:normal;color:var(--ac)}
+.ph p{font-size:15px;color:var(--tx-m);max-width:620px;line-height:1.65}
+.meta{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.sec{margin-bottom:52px}
+.sec-hdr{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--bd-s)}
+.sec-num{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx-f);min-width:22px}
+.sec-icon{width:30px;height:30px;border-radius:7px;background:var(--ac-g);border:1px solid var(--ac-b);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.sec-hdr h2{font-size:19px;font-weight:700;letter-spacing:-.02em;color:var(--tx)}
+.sub{margin-bottom:26px}
+.sub h3{font-size:14px;font-weight:600;color:var(--tx);margin:20px 0 8px;display:flex;align-items:center;gap:8px}
+.sub h3::before{content:'';display:block;width:3px;height:13px;background:var(--ac);border-radius:2px;flex-shrink:0}
+p{color:var(--tx-m);margin-bottom:10px;line-height:1.75}
+p strong{color:var(--tx);font-weight:600}
+.cb{background:var(--bg-code);border:1px solid var(--bd);border-radius:10px;margin:12px 0;overflow:hidden;transition:background var(--tr),border-color var(--tr)}
+.cb-hdr{display:flex;align-items:center;justify-content:space-between;padding:7px 13px;background:color-mix(in srgb,var(--bg-code) 60%,var(--bd-s));border-bottom:1px solid var(--bd);font-size:11px;color:var(--tx-f);font-family:'IBM Plex Mono',monospace}
+.cb-dots{display:flex;gap:5px}
+.cb-dots span{width:9px;height:9px;border-radius:50%;background:var(--bd)}
+.cp{background:none;border:1px solid var(--bd);color:var(--tx-f);cursor:pointer;font-size:10px;padding:2px 7px;border-radius:4px;font-family:'IBM Plex Mono',monospace;transition:all .13s}
+.cp:hover{border-color:var(--ac);color:var(--ac)}
+.cp.ok{border-color:var(--ac2);color:var(--ac2)}
+pre{padding:14px 18px;overflow-x:auto;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.65;color:var(--tx)}
+pre::-webkit-scrollbar{height:3px}
+pre::-webkit-scrollbar-thumb{background:var(--scr);border-radius:3px}
+code{font-family:'IBM Plex Mono',monospace;font-size:.88em}
+p code,li code,td code{background:var(--bg-code);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;color:var(--tag-tx)}
+.kw{color:#ff7b72}.cm{color:#8b949e;font-style:italic}.sv{color:#a5d6ff}.fn{color:#d2a8ff}.op{color:#79c0ff}.ok{color:#3fb950}.er{color:#f85149}.nu{color:#ffa657}
+.tw{overflow-x:auto;margin:12px 0;border-radius:10px;border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:color-mix(in srgb,var(--ac) 7%,var(--bg-c))}
+thead th{padding:9px 13px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--tx-m);border-bottom:1px solid var(--bd);font-family:'IBM Plex Mono',monospace}
+tbody tr{border-bottom:1px solid var(--bd-s)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--ac-g)}
+td{padding:8px 13px;color:var(--tx-m);vertical-align:top}
+td:first-child{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--tag-tx)}
+.cal{border-radius:8px;padding:11px 15px;margin:12px 0;display:flex;gap:11px;font-size:13px;line-height:1.6}
+.cal-i{font-size:14px;flex-shrink:0;margin-top:1px}
+.cal-b{color:var(--tx-m)}
+.cal-b strong{color:var(--tx)}
+.cal.note{background:rgba(47,129,247,.08);border:1px solid rgba(47,129,247,.25)}
+.cal.note .cal-i{color:var(--ac)}
+.cal.warn{background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.30)}
+.cal.warn .cal-i{color:var(--aw)}
+.cal.good{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.25)}
+.cal.good .cal-i{color:var(--ac2)}
+.cal.err{background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.25)}
+.cal.err .cal-i{color:var(--ae)}
+ul{list-style:none;padding:0;margin:8px 0}
+ul li{padding:3px 0 3px 20px;position:relative;color:var(--tx-m);font-size:14px;line-height:1.65}
+ul li::before{content:'';position:absolute;left:4px;top:12px;width:5px;height:5px;border-radius:50%;background:var(--ac);opacity:.55}
+.steps{display:flex;flex-direction:column;margin:14px 0}
+.step{display:flex;gap:16px}
+.step-l{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.step-dot{width:26px;height:26px;border-radius:50%;background:var(--ac-g);border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ac);font-weight:700}
+.step-line{width:2px;flex:1;background:var(--bd-s);margin:4px 0;min-height:10px}
+.step-b{padding-bottom:18px;flex:1;min-width:0}
+.step-b h4{font-size:13px;font-weight:600;color:var(--tx);margin-bottom:5px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}
+.fi{background:var(--bg-c);border:1px solid var(--bd-s);border-radius:7px;padding:9px 11px;transition:border-color .13s}
+.fi:hover{border-color:var(--ac)}
+.fi .fk{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--tag-tx);margin-bottom:2px}
+.fi .fd{font-size:12px;color:var(--tx-m);line-height:1.45}
+.req{font-size:10px;color:var(--ae);margin-left:5px}
+.opt{font-size:10px;color:var(--tx-f);margin-left:5px}
+.xt{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+.xr{display:flex;align-items:center;gap:10px;padding:6px 11px;border-radius:6px;background:var(--bg-c);border:1px solid var(--bd-s);font-size:13px}
+.xc{font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:2px 8px;border-radius:4px;flex-shrink:0;min-width:24px;text-align:center}
+.xc.ok{background:rgba(63,185,80,.12);color:var(--ac2)}
+.xc.er{background:rgba(248,81,73,.12);color:var(--ae)}
+.xc.sy{background:rgba(210,153,34,.12);color:var(--aw)}
+.xd{color:var(--tx-m)}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--scr);border-radius:4px}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.sidebar{display:none}main{padding:22px 18px 60px}.fg{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="layout">
+<header class="topbar">
+  <a class="logo" href="#">
+    <div class="logo-mark">Pdf</div>
+    <span class="logo-name">PdfCreator</span>
+  </a>
+  <div class="tb-div"></div>
+  <span class="tb-sub">Part 2 of 2 — Security, PDF/A &amp; AcroForms</span>
+  <div class="tb-right">
+    <span class="badge">AES-256</span><span class="badge">PKCS#7</span><span class="badge">ISO 19005-1</span><span class="badge">AcroForms</span>
+    <button class="theme-btn" id="themeBtn">☀</button>
+  </div>
+</header>
+<nav class="sidebar">
+<div class="nav-group"><div class="nav-label">Overview</div><a class="nav-a" href="#s01"><span class="nav-dot">⬡</span>Overview</a></div><div class="nav-group"><div class="nav-label">Security & Signing</div><a class="nav-a" href="#s02"><span class="nav-dot">⬡</span>Encryption & Permissions</a><a class="nav-a" href="#s03"><span class="nav-dot">⬡</span>Digital Signatures</a></div><div class="nav-group"><div class="nav-label">PDF / A</div><a class="nav-a" href="#s04"><span class="nav-dot">⬡</span>Generating PDF/A</a><a class="nav-a" href="#s05"><span class="nav-dot">⬡</span>Validating PDF/A</a><a class="nav-a" href="#s06"><span class="nav-dot">⬡</span>PDF/A + Operations</a><a class="nav-a" href="#s07"><span class="nav-dot">⬡</span>Error Code Reference</a></div><div class="nav-group"><div class="nav-label">AcroForms</div><a class="nav-a" href="#s08"><span class="nav-dot">⬡</span>Generate Form</a><a class="nav-a" href="#s09"><span class="nav-dot">⬡</span>Extract Form</a><a class="nav-a" href="#s10"><span class="nav-dot">⬡</span>Fill Form</a><a class="nav-a" href="#s11"><span class="nav-dot">⬡</span>End-to-End Workflow</a></div><div class="nav-group"><div class="nav-label">Reference</div><a class="nav-a" href="#s12"><span class="nav-dot">⬡</span>All Flags — Part 2</a><a class="nav-a" href="#s13"><span class="nav-dot">⬡</span>Quick Reference</a></div>
+  <div class="nav-group">
+    <div class="nav-label">Other Part</div>
+    <a class="part-link" href="PdfCreator-Usage-Guide-Part1.html">Part 1: Generation, Reading &amp; Manipulation<span>Switch guide →</span></a>
+  </div>
+</nav>
+<main>
+<div id="s01" class="sec"><div class="sec-hdr"><span class="sec-num">01</span><div class="sec-icon">◈</div><h2>Overview</h2></div><div class="ph" style="margin-bottom:24px"><h1>Usage Guide <em>Part 2</em></h1><p>Encryption, digital signatures, PDF/A archival compliance, and interactive AcroForms — all security and compliance CLI operations.</p><div class="meta"><span class="badge">AES-256</span><span class="badge">PKCS#7</span><span class="badge">ISO 19005-1</span><span class="badge">ISO 32000-1 AcroForms</span></div></div><div class="tw"><table><thead><tr><th>Section</th><th>Covers</th><th>Key Flags</th></tr></thead><tbody><tr><td>§02 Encryption</td><td>AES-256 encrypt/decrypt, permission presets, inspect</td><td>--encrypt, --decrypt, --inspect-security</td></tr><tr><td>§03 Signatures</td><td>Sign with keystore, visible sig, TSA timestamps, verify</td><td>--sign, --verify, --export-cert</td></tr><tr><td>§04 Generate PDF/A</td><td>Attach ISO 19005-1 compliance markers on any generation</td><td>--pdfa</td></tr><tr><td>§05 Validate PDF/A</td><td>Preflight engine, JSON report, exit codes for CI</td><td>--validate-pdfa</td></tr><tr><td>§06 PDF/A + Operations</td><td>Merge/split/sign compatibility, encryption incompatibility</td><td>—</td></tr><tr><td>§07 Error Codes</td><td>All Preflight error codes with fixes</td><td>—</td></tr><tr><td>§08 Generate Form</td><td>Create interactive AcroForm PDFs from CLI field specs</td><td>--generate-form</td></tr><tr><td>§09 Extract Form</td><td>Read field names, types, values as JSON</td><td>--extract-form</td></tr><tr><td>§10 Fill Form</td><td>Set field values, optional flatten for archival</td><td>--fill-form</td></tr><tr><td>§11 Workflow</td><td>Complete 5-step create→inspect→fill→flatten→validate loop</td><td>—</td></tr></tbody></table></div></div><div id="s02" class="sec"><div class="sec-hdr"><span class="sec-num">02</span><div class="sec-icon">⊛</div><h2>Encryption &amp; Permissions</h2></div><p>AES-256 encryption and permission management via PDFBox's <code>StandardProtectionPolicy</code>. Every encrypted PDF carries two passwords: a <strong>user password</strong> (needed to open) and an <strong>owner password</strong> (full control, change permissions). Both can be the same string.</p><div class="sub"><h3>Encrypt</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Encrypt with a named permission preset</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--encrypt</span> \
+  <span class="kw">--input</span>          <span class="sv">report.pdf</span> \
+  <span class="kw">--output</span>         <span class="sv">report-enc.pdf</span> \
+  <span class="kw">--owner-password</span> <span class="sv">admin456</span> \
+  <span class="kw">--user-password</span>  <span class="sv">view123</span> \
+  <span class="kw">--permissions</span>    <span class="sv">FILL_AND_PRINT</span>
+
+<span class="cm"># Encrypt with individual deny flags</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--encrypt</span> \
+  <span class="kw">--input</span>          <span class="sv">report.pdf</span> \
+  <span class="kw">--output</span>         <span class="sv">report-enc.pdf</span> \
+  <span class="kw">--owner-password</span> <span class="sv">secret</span> \
+  <span class="kw">--user-password</span>  <span class="sv">view</span> \
+  <span class="kw">--deny-modify</span> <span class="kw">--deny-extract</span></pre></div></div><div class="sub"><h3>Decrypt &amp; inspect</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Decrypt (owner password required)</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--decrypt</span> \
+  <span class="kw">--input</span>          <span class="sv">report-enc.pdf</span> \
+  <span class="kw">--output</span>         <span class="sv">report-plain.pdf</span> \
+  <span class="kw">--owner-password</span> <span class="sv">admin456</span>
+
+<span class="cm"># Inspect any encrypted PDF — no password needed if user password is empty</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--inspect-security</span> \
+  <span class="kw">--input</span>          <span class="sv">report-enc.pdf</span>
+
+<span class="cm"># Supply --owner-password only when a user password is also set</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--inspect-security</span> \
+  <span class="kw">--input</span>          <span class="sv">report-enc.pdf</span> \
+  <span class="kw">--owner-password</span> <span class="sv">admin456</span></pre></div></div><div class="sub"><h3>Permission presets (--permissions)</h3><div class="tw"><table><thead><tr><th>Preset</th><th>Permissions Granted</th></tr></thead><tbody><tr><td>FULL_ACCESS</td><td>All 8 flags enabled — equivalent to unencrypted</td></tr><tr><td>VIEW_ONLY</td><td>canExtractForAccessibility only</td></tr><tr><td>PRINT_ONLY</td><td>canPrint + canPrintDegraded + canExtractForAccessibility</td></tr><tr><td>FILL_AND_PRINT</td><td>canFillInForm + canPrint + canPrintDegraded + canExtractForAccessibility</td></tr></tbody></table></div></div><div class="sub"><h3>Individual permission flags</h3><div class="tw"><table><thead><tr><th>Flag Pair</th><th>Controls</th></tr></thead><tbody><tr><td>--deny-print / --allow-print</td><td>Printing at any quality</td></tr><tr><td>--deny-modify / --allow-modify</td><td>Modifying document content</td></tr><tr><td>--deny-extract / --allow-extract</td><td>Copying or extracting text and images</td></tr><tr><td>--deny-annotations / --allow-annotations</td><td>Adding or modifying annotations and form fields</td></tr><tr><td>--deny-forms / --allow-forms</td><td>Filling in interactive form fields</td></tr><tr><td>--deny-accessibility / --allow-accessibility</td><td>Extraction for assistive technologies</td></tr><tr><td>--deny-assemble / --allow-assemble</td><td>Page insertion, rotation, bookmark creation</td></tr><tr><td>--deny-print-faithful / --allow-print-faithful</td><td>High-quality printing (deny = draft/degraded only)</td></tr></tbody></table></div></div></div><div id="s03" class="sec"><div class="sec-hdr"><span class="sec-num">03</span><div class="sec-icon">✦</div><h2>Digital Signatures</h2></div><p>PKCS#7/CMS detached signatures using <code>adbe.pkcs7.detached</code> — the format supported by Adobe Acrobat and all major PDF viewers. The signature is embedded as an incremental revision; the original byte ranges are never modified.</p><div class="sub"><h3>Sign</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Invisible signature with RFC 3161 TSA timestamp</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--sign</span> \
+  <span class="kw">--input</span>             <span class="sv">statement.pdf</span> \
+  <span class="kw">--output</span>            <span class="sv">statement-signed.pdf</span> \
+  <span class="kw">--keystore</span>          <span class="sv">bank.p12</span> \
+  <span class="kw">--keystore-password</span> <span class="sv">secret</span> \
+  <span class="kw">--reason</span>            <span class="sv">"Monthly Account Statement"</span> \
+  <span class="kw">--location</span>          <span class="sv">"Mumbai, India"</span> \
+  <span class="kw">--tsa-url</span>           <span class="sv">http://timestamp.digicert.com</span>
+
+<span class="cm"># Visible signature box on page 1</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--sign</span> \
+  <span class="kw">--input</span>             <span class="sv">contract.pdf</span> \
+  <span class="kw">--output</span>            <span class="sv">contract-signed.pdf</span> \
+  <span class="kw">--keystore</span>          <span class="sv">signing.p12</span> \
+  <span class="kw">--keystore-password</span> <span class="sv">secret</span> \
+  <span class="kw">--visible</span> <span class="kw">--sig-page</span> <span class="nu">1</span> \
+  <span class="kw">--sig-x</span> <span class="nu">50</span> <span class="kw">--sig-y</span> <span class="nu">50</span> <span class="kw">--sig-width</span> <span class="nu">200</span> <span class="kw">--sig-height</span> <span class="nu">60</span></pre></div></div><div class="sub"><h3>Verify &amp; export certificate</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Verify against JVM default trust (commercial CA certs)</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--verify</span> <span class="kw">--input</span> <span class="sv">statement-signed.pdf</span>
+
+<span class="cm"># Verify with a custom trust anchor (self-signed or internal CA)</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--verify</span> \
+  <span class="kw">--input</span>      <span class="sv">statement-signed.pdf</span> \
+  <span class="kw">--truststore</span> <span class="sv">bank-public.cer</span>
+
+<span class="cm"># Export the signing certificate from a keystore</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--export-cert</span> \
+  <span class="kw">--keystore</span>          <span class="sv">bank.p12</span> \
+  <span class="kw">--keystore-password</span> <span class="sv">secret</span> \
+  <span class="kw">--output</span>            <span class="sv">bank-public.cer</span></pre></div></div><div class="sub"><h3>Generate a test keystore with keytool</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash — keytool</span><button class="cp" onclick="cp(this)">copy</button></div><pre>keytool <span class="kw">-genkeypair</span> \
+  <span class="kw">-storepass</span>  changeit \
+  <span class="kw">-storetype</span>  PKCS12 \
+  <span class="kw">-alias</span>      myorg \
+  <span class="kw">-validity</span>   <span class="nu">365</span> \
+  <span class="kw">-keyalg</span>     RSA \
+  <span class="kw">-keysize</span>    <span class="nu">2048</span> \
+  <span class="kw">-dname</span>      <span class="sv">"CN=MyOrg Statements, O=MyOrg, L=Chennai, ST=TN, C=IN"</span> \
+  <span class="kw">-keystore</span>   myorg.p12</pre></div></div><div class="sub"><h3>Verification checks</h3><div class="tw"><table><thead><tr><th>Check</th><th>What It Verifies</th></tr></thead><tbody><tr><td>signatureValid</td><td>CMS digest matches the ByteRange bytes — document not tampered after signing</td></tr><tr><td>coverageComplete</td><td>ByteRange covers the entire file — no content appended after signing</td></tr><tr><td>certTrusted</td><td>Certificate chain validates to a trust anchor (JVM cacerts or supplied truststore)</td></tr><tr><td>certExpiredAtSigning</td><td>Signing certificate was valid at the time recorded in the signature</td></tr></tbody></table></div></div><div class="sub"><h3>Free TSA endpoints</h3><div class="tw"><table><thead><tr><th>Provider</th><th>URL</th></tr></thead><tbody><tr><td>DigiCert</td><td>http://timestamp.digicert.com</td></tr><tr><td>GlobalSign</td><td>http://timestamp.globalsign.com/scripts/timstamp.dll</td></tr><tr><td>Sectigo</td><td>http://timestamp.sectigo.com</td></tr></tbody></table></div></div><div class="sub"><h3>Sign flags</h3><div class="tw"><table><thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td>--sign</td><td>Yes</td><td>Activates sign mode</td></tr><tr><td>--input / --output</td><td>Yes</td><td>Source and output PDF paths</td></tr><tr><td>--keystore &lt;path&gt;</td><td>Yes</td><td>PKCS#12 (.p12) keystore file</td></tr><tr><td>--keystore-password &lt;pwd&gt;</td><td>Yes</td><td>Keystore password</td></tr><tr><td>--reason &lt;text&gt;</td><td>No</td><td>Signing reason embedded in the signature dictionary</td></tr><tr><td>--location &lt;text&gt;</td><td>No</td><td>Signing location embedded in the signature dictionary</td></tr><tr><td>--tsa-url &lt;url&gt;</td><td>No</td><td>RFC 3161 TSA URL for a trusted timestamp</td></tr><tr><td>--visible</td><td>No</td><td>Add a visible signature appearance box on the page</td></tr><tr><td>--sig-page &lt;n&gt;</td><td>No</td><td>Page for visible signature. Default: 1</td></tr><tr><td>--sig-x / --sig-y</td><td>No</td><td>Bottom-left corner of the signature box in points</td></tr><tr><td>--sig-width / --sig-height</td><td>No</td><td>Dimensions of the signature box in points</td></tr><tr><td>--verify</td><td>—</td><td>Verify signatures in an existing signed PDF</td></tr><tr><td>--truststore &lt;path&gt;</td><td>No</td><td>Custom .cer trust anchor for --verify</td></tr><tr><td>--export-cert</td><td>—</td><td>Export the signing certificate from a keystore to a .cer file</td></tr></tbody></table></div></div></div><div id="s04" class="sec"><div class="sec-hdr"><span class="sec-num">04</span><div class="sec-icon">⬡</div><h2>Generating PDF/A-1b Documents</h2></div><p>Add <code>--pdfa</code> to any generation command to produce an ISO 19005-1 Level B compliant document. The pipeline saves with <code>CompressParameters.NO_COMPRESSION</code> (avoiding forbidden cross-reference streams) and attaches all four required XMP metadata schemas: DublinCore, AdobePDF, XMPBasic, and PDFAIdentification.</p><div class="sub"><h3>Template mode</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> \
+  <span class="kw">--template-id</span> <span class="sv">bank-statement</span> \
+  <span class="kw">--data-file</span>   <span class="sv">data/statements/statement-001.json</span> \
+  <span class="kw">--output</span>      <span class="sv">output/statement-001.pdf</span> \
+  <span class="kw">--pdfa</span></pre></div><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>console output</span></div><pre><span class="op">Template :</span> bank-statement — Monthly Account Statement
+<span class="op">PDF/A-1b :</span> <span class="ok">compliance markers attached</span>
+<span class="op">Pages    :</span> 3 → output/statement-001.pdf</pre></div></div><div class="sub"><h3>Batch mode</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> \
+  <span class="kw">--batch</span> <span class="kw">--template-id</span> <span class="sv">bank-statement</span> \
+  <span class="kw">--data-dir</span>   <span class="sv">data/statements/</span> \
+  <span class="kw">--output-dir</span> <span class="sv">output/statements/</span> \
+  <span class="kw">--threads</span> <span class="nu">8</span> <span class="kw">--pdfa</span></pre></div></div><div class="sub"><h3>Batch + sign in one pass</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> \
+  <span class="kw">--batch</span> <span class="kw">--template-id</span> <span class="sv">bank-statement</span> \
+  <span class="kw">--data-dir</span>          <span class="sv">data/statements/</span> \
+  <span class="kw">--output-dir</span>        <span class="sv">output/signed/</span> \
+  <span class="kw">--threads</span> <span class="nu">4</span> <span class="kw">--pdfa</span> <span class="kw">--sign</span> \
+  <span class="kw">--keystore</span>          <span class="sv">bank.p12</span> \
+  <span class="kw">--keystore-password</span> <span class="sv">secret</span> \
+  <span class="kw">--reason</span>            <span class="sv">"Monthly Account Statement"</span> \
+  <span class="kw">--tsa-url</span>           <span class="sv">http://timestamp.digicert.com</span></pre></div><div class="cal note"><span class="cal-i">ℹ</span><div class="cal-b">Each PDF is generated → PDF/A markers are attached → it is digitally signed — all in the same pipeline pass. The unsigned intermediate file is never written to disk.</div></div></div><div class="cal warn"><span class="cal-i">⚠</span><div class="cal-b"><strong>PDF/A is incompatible with AcroForm interactive fields.</strong> ISO 19005-1 §6.1.3 forbids interactive features. To archive a filled form, fill and flatten it first (<code>--fill-form --flatten</code>), then validate with <code>--validate-pdfa</code>. See §10–11.</div></div></div><div id="s05" class="sec"><div class="sec-hdr"><span class="sec-num">05</span><div class="sec-icon">✓</div><h2>Validating PDF/A Compliance</h2></div><p>Runs the PDFBox Preflight engine — a syntax check during parsing, then a full ISO 19005 semantic rule check on the parsed document tree.</p><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Basic validation — print result to stdout</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> <span class="kw">--input</span> <span class="sv">statement.pdf</span>
+
+<span class="cm"># Write JSON report to file</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> \
+  <span class="kw">--input</span>  <span class="sv">statement.pdf</span> \
+  <span class="kw">--output</span> <span class="sv">validation-report.json</span>
+
+<span class="cm"># Validate against PDF/A-1a (stricter accessibility rules)</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> \
+  <span class="kw">--input</span>    <span class="sv">report.pdf</span> \
+  <span class="kw">--standard</span> <span class="sv">pdf-a-1a</span>
+
+<span class="cm"># Cap errors at 20 (useful for large noisy batches)</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> \
+  <span class="kw">--input</span>      <span class="sv">large-report.pdf</span> \
+  <span class="kw">--max-errors</span> <span class="nu">20</span></pre></div><div class="sub"><h3>Sample console output</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>valid document</span></div><pre><span class="ok">✓ PASSED  PDF/A-1b</span>  ·  statement.pdf  ·  3 pages  ·  0.84 s
+  No conformance issues found.</pre></div><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>invalid document</span></div><pre><span class="er">✗ FAILED  PDF/A-1b</span>  ·  statement.pdf  ·  3 pages  ·  0.61 s
+  Issues: 7   (Fonts: 4  ·  Metadata/XMP: 2  ·  Graphics: 1)
+
+  [3.1.3] Fonts  [p1] — font Helvetica is not embedded
+  [7.11]  XMP    — PDF/A identification schema missing
+  [2.4]   Colour — missing OutputIntent for DeviceRGB</pre></div></div><div class="sub"><h3>Exit codes — for CI/CD scripts</h3><div class="xt"><div class="xr"><span class="xc ok">0</span><span class="xd">Document is valid — no conformance issues</span></div><div class="xr"><span class="xc er">1</span><span class="xd">Document is invalid — one or more issues found</span></div><div class="xr"><span class="xc sy">2</span><span class="xd">Error — file not found, unreadable, or unknown --standard value</span></div></div><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash — CI/CD</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Fail the build if the PDF is not compliant</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> <span class="kw">--input</span> <span class="sv">output/statement.pdf</span>
+if [ $? -ne <span class="nu">0</span> ]; then echo <span class="sv">"validation failed"</span>; exit <span class="nu">1</span>; fi
+
+<span class="cm"># Validate all PDFs in a directory</span>
+for f in output/*.pdf; do
+  <span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> <span class="kw">--input</span> <span class="sv">"$f"</span> <span class="kw">--max-errors</span> <span class="nu">5</span>
+done
+
+<span class="cm"># Inline pass/fail</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> <span class="kw">--input</span> out.pdf && echo <span class="ok">PASS</span> || echo <span class="er">FAIL</span></pre></div></div><div class="sub"><h3>--validate-pdfa flags</h3><div class="tw"><table><thead><tr><th>Flag</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td>--validate-pdfa</td><td>Yes</td><td>—</td><td>Activates validation mode</td></tr><tr><td>--input &lt;path&gt;</td><td>Yes</td><td>—</td><td>PDF file to validate</td></tr><tr><td>--output &lt;path&gt;</td><td>No</td><td>stdout</td><td>Write JSON validation report to file</td></tr><tr><td>--standard &lt;n&gt;</td><td>No</td><td>pdf-a-1b</td><td>pdf-a-1b or pdf-a-1a</td></tr><tr><td>--max-errors &lt;n&gt;</td><td>No</td><td>0 (unlimited)</td><td>Stop collecting errors after N issues</td></tr><tr><td>--password &lt;pwd&gt;</td><td>No</td><td>—</td><td>Password for encrypted input (will always fail — encryption is forbidden)</td></tr></tbody></table></div></div></div><div id="s06" class="sec"><div class="sec-hdr"><span class="sec-num">06</span><div class="sec-icon">⊕</div><h2>PDF/A and Other Operations</h2></div><div class="sub"><h3>Merge — compliance preserved automatically</h3><p>When at least one input to <code>--merge</code> is PDF/A, the output automatically receives compliance markers and the sRGB output intent.</p><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--merge</span> \
+  <span class="kw">--input</span>  cover.pdf body.pdf appendix.pdf \
+  <span class="kw">--output</span> <span class="sv">merged.pdf</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> <span class="kw">--input</span> <span class="sv">merged.pdf</span></pre></div></div><div class="sub"><h3>Split — compliance preserved automatically</h3><p>Each part produced by <code>--split</code> inherits PDF/A markers from the source document.</p><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--split</span> \
+  <span class="kw">--input</span>          <span class="sv">annual-report-pdfa.pdf</span> \
+  <span class="kw">--output-dir</span>     <span class="sv">parts/</span> \
+  <span class="kw">--split-mode</span>     every-n \
+  <span class="kw">--pages-per-part</span> <span class="nu">5</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> <span class="kw">--input</span> <span class="sv">parts/part-001.pdf</span></pre></div></div><div class="sub"><h3>Encryption vs signing compatibility</h3><div class="tw"><table><thead><tr><th>Operation</th><th>PDF/A-1b Compatible?</th><th>Notes</th></tr></thead><tbody><tr><td>--encrypt</td><td>❌ No — error [8.1]</td><td>Encryption is forbidden by ISO 19005-1. PdfCreator warns but does not block the operation.</td></tr><tr><td>--sign</td><td>✅ Yes</td><td>adbe.pkcs7.detached is the approved PDF/A-1 signature subfilter. Applied as an incremental revision.</td></tr></tbody></table></div></div></div><div id="s07" class="sec"><div class="sec-hdr"><span class="sec-num">07</span><div class="sec-icon">⚑</div><h2>PDF/A Error Code Reference</h2></div><div class="tw"><table><thead><tr><th>Code</th><th>Category</th><th>Common Cause &amp; Fix</th></tr></thead><tbody><tr><td>[1.4]</td><td>Cross-reference streams</td><td>PDF 1.5+ xref streams present (forbidden under PDF/A-1b). Fix: save with CompressParameters.NO_COMPRESSION.</td></tr><tr><td>[2.x]</td><td>Graphics / Colour</td><td>DeviceRGB or CMYK used without an sRGB output intent ICC profile.</td></tr><tr><td>[3.1.3]</td><td>Fonts</td><td>Non-embedded font — the most common failure when generating without --pdfa.</td></tr><tr><td>[3.1.x]</td><td>Fonts</td><td>Missing FontDescriptor or missing ToUnicode map.</td></tr><tr><td>[4.x]</td><td>Transparency</td><td>SMask, blend modes, or alpha compositing — forbidden in PDF/A-1.</td></tr><tr><td>[5.x]</td><td>Annotations</td><td>Forbidden annotation types, e.g. FileAttachment, Movie.</td></tr><tr><td>[6.x]</td><td>Actions</td><td>JavaScript, GoToRemote, Launch, or URI actions are forbidden.</td></tr><tr><td>[7.1]</td><td>Metadata / XMP</td><td>XMP stream absent or structurally invalid. Fix: attach all four required XMP schemas.</td></tr><tr><td>[7.2]</td><td>Metadata sync</td><td>Info dict values not mirrored to XMP. Fix: sync Subject → dc:description; read ModDate back from the info dict — do not call Calendar.getInstance() independently.</td></tr><tr><td>[7.11]</td><td>PDF/A ID schema</td><td>Missing pdfaid:part / pdfaid:conformance. Fix: attach PDFAIdentificationSchema with part=1, conformance=B.</td></tr><tr><td>[8.1]</td><td>Encryption</td><td>Always forbidden. Distribute unencrypted PDF/A files with access controls at system or portal level.</td></tr></tbody></table></div></div><div id="s08" class="sec"><div class="sec-hdr"><span class="sec-num">08</span><div class="sec-icon">⊞</div><h2>Generate Form</h2></div><p>Creates a new PDF with interactive AcroForm fields from scratch. No template file required — fields are defined entirely via repeatable <code>--field</code> arguments using a comma-separated spec format.</p><div class="sub"><h3>Full example with all field types</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--generate-form</span> \
+  <span class="kw">--output</span> <span class="sv">output/loan-application.pdf</span> \
+  <span class="kw">--title</span>  <span class="sv">"Loan Application Form"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=fullName,type=text,label=Full Name,required,tooltip=Enter your legal name"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=email,type=text,label=Email Address,required"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=address,type=multiline,label=Residential Address,rows=3"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=loanType,type=combo,label=Loan Type,options=Personal|Home|Auto|Education,default=Personal"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=repayment,type=radio,label=Repayment Frequency,options=Monthly|Quarterly|Annual"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=branch,type=listbox,label=Preferred Branch,options=Chennai|Mumbai|Delhi|Bangalore"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=consent,type=checkbox,label=I agree to the terms,default=Yes"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=notes,type=multiline,label=Additional Notes,rows=4,readonly"</span></pre></div></div><div class="sub"><h3>Field types</h3><div class="tw"><table><thead><tr><th>type=</th><th>PDFBox Class</th><th>Description</th></tr></thead><tbody><tr><td>text</td><td>PDTextField</td><td>Single-line text input</td></tr><tr><td>multiline</td><td>PDTextField (multiline=true)</td><td>Multi-line text area — height auto-calculated from rows=</td></tr><tr><td>checkbox</td><td>PDCheckBox</td><td>On/off toggle — default=Yes pre-checks it</td></tr><tr><td>radio</td><td>PDRadioButton</td><td>Mutually exclusive group — one widget per option, stacked vertically</td></tr><tr><td>combo</td><td>PDComboBox</td><td>Drop-down selector — requires options=</td></tr><tr><td>listbox</td><td>PDListBox</td><td>Scrollable list — requires options=</td></tr></tbody></table></div></div><div class="sub"><h3>Field spec keys</h3><div class="fg"><div class="fi"><div class="fk">name=&lt;n&gt;<span class="req">required</span></div><div class="fd">AcroForm partial field name. Must be unique within the form.</div></div><div class="fi"><div class="fk">type=&lt;t&gt;<span class="req">required</span></div><div class="fd">text · multiline · checkbox · radio · combo · listbox</div></div><div class="fi"><div class="fk">label=&lt;text&gt;<span class="opt">optional</span></div><div class="fd">Human-readable label printed above the widget.</div></div><div class="fi"><div class="fk">required<span class="opt">flag</span></div><div class="fd">Sets PDF Required flag. Displayed with * in the rendered form.</div></div><div class="fi"><div class="fk">readonly<span class="opt">flag</span></div><div class="fd">Sets ReadOnly flag. Field is visible but not editable.</div></div><div class="fi"><div class="fk">default=&lt;v&gt;<span class="opt">optional</span></div><div class="fd">Initial value. Use "Yes" to pre-check a CHECKBOX.</div></div><div class="fi"><div class="fk">options=&lt;a|b|c&gt;<span class="opt">req for radio/combo/listbox</span></div><div class="fd">Pipe-separated selectable options.</div></div><div class="fi"><div class="fk">tooltip=&lt;text&gt;<span class="opt">optional</span></div><div class="fd">Widget tooltip stored in annotation Contents entry.</div></div><div class="fi"><div class="fk">rows=&lt;n&gt;<span class="opt">optional</span></div><div class="fd">MULTILINE / LISTBOX: visible rows. Default: 3.</div></div><div class="fi"><div class="fk">height=&lt;pts&gt;<span class="opt">optional</span></div><div class="fd">Widget height in points. 0 = auto-calculated.</div></div><div class="fi"><div class="fk">toggleSize=&lt;pts&gt;<span class="opt">optional</span></div><div class="fd">CHECKBOX / RADIO: widget square size. Default: 12 pt.</div></div></div></div><div class="sub"><h3>Generate form flags</h3><div class="tw"><table><thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td>--generate-form</td><td>Yes</td><td>Activates form generation mode</td></tr><tr><td>--output &lt;path&gt;</td><td>Yes</td><td>Output PDF file path</td></tr><tr><td>--title &lt;text&gt;</td><td>No</td><td>Form title heading. Default: "Form"</td></tr><tr><td>--config-id &lt;id&gt;</td><td>No</td><td>Style preset. Default: default</td></tr><tr><td>--field &lt;spec&gt;</td><td>No (repeatable)</td><td>Field definition — see spec keys above</td></tr></tbody></table></div></div></div><div id="s09" class="sec"><div class="sec-hdr"><span class="sec-num">09</span><div class="sec-icon">⊙</div><h2>Extract Form</h2></div><p>Reads all AcroForm fields from an existing PDF using a depth-first <code>getFieldIterator()</code> traversal — correctly discovers nested fields like <code>address.city</code> that <code>getFields()</code> would miss. Output is JSON. Omit <code>--output</code> to print to stdout, enabling piping to other tools.</p><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Print JSON to stdout</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract-form</span> <span class="kw">--input</span> <span class="sv">output/loan-application.pdf</span>
+
+<span class="cm"># Write to file</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract-form</span> \
+  <span class="kw">--input</span>  <span class="sv">output/loan-application.pdf</span> \
+  <span class="kw">--output</span> <span class="sv">output/loan-fields.json</span>
+
+<span class="cm"># Password-protected PDF</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract-form</span> \
+  <span class="kw">--input</span>    <span class="sv">output/loan-secured.pdf</span> \
+  <span class="kw">--output</span>   <span class="sv">output/loan-fields.json</span> \
+  <span class="kw">--password</span> <span class="sv">s3cr3t</span></pre></div><div class="sub"><h3>JSON output format</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>json</span></div><pre>{
+  <span class="op">"sourcePath"</span>:     <span class="sv">"output/loan-application.pdf"</span>,
+  <span class="op">"hasAcroForm"</span>:    <span class="ok">true</span>,
+  <span class="op">"totalFields"</span>:    8,
+  <span class="op">"fillableFields"</span>: 8,
+  <span class="op">"durationMs"</span>:     34,
+  <span class="op">"fields"</span>: [
+    {
+      <span class="op">"partialName"</span>:        <span class="sv">"loanType"</span>,
+      <span class="op">"fullyQualifiedName"</span>: <span class="sv">"loanType"</span>,
+      <span class="op">"fieldType"</span>:          <span class="sv">"COMBO"</span>,
+      <span class="op">"currentValue"</span>:       <span class="sv">"Personal"</span>,
+      <span class="op">"required"</span>:           <span class="ok">false</span>,
+      <span class="op">"readOnly"</span>:           <span class="ok">false</span>,
+      <span class="op">"tooltip"</span>:            null,
+      <span class="op">"options"</span>:            [<span class="sv">"Personal"</span>, <span class="sv">"Home"</span>, <span class="sv">"Auto"</span>, <span class="sv">"Education"</span>]
+    }
+  ]
+}</pre></div><div class="cal note"><span class="cal-i">ℹ</span><div class="cal-b">Field types <code>PUSHBUTTON</code> and <code>SIGNATURE</code> appear in extraction output but are not fillable — PdfFormFiller rejects any attempt to set values on them. <code>hasAcroForm: false</code> means the PDF has no interactive form at all.</div></div></div><div class="sub"><h3>Extract form flags</h3><div class="tw"><table><thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td>--extract-form</td><td>Yes</td><td>Activates extraction mode</td></tr><tr><td>--input &lt;path&gt;</td><td>Yes</td><td>Source PDF with AcroForm</td></tr><tr><td>--output &lt;path&gt;</td><td>No</td><td>JSON output file. Omit to print to stdout</td></tr><tr><td>--password &lt;pwd&gt;</td><td>No</td><td>Password for encrypted PDFs</td></tr></tbody></table></div></div></div><div id="s10" class="sec"><div class="sec-hdr"><span class="sec-num">10</span><div class="sec-icon">✎</div><h2>Fill Form</h2></div><p>Fills field values into an existing AcroForm and writes to a new file. The source PDF is <strong>never modified</strong>. Fields are resolved by fully-qualified name first, then partial name as fallback — so <code>city</code> matches <code>address.city</code> when unambiguous.</p><div class="sub"><h3>Fill and keep editable</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--fill-form</span> \
+  <span class="kw">--input</span>  <span class="sv">output/loan-application.pdf</span> \
+  <span class="kw">--output</span> <span class="sv">output/loan-filled.pdf</span> \
+  <span class="kw">--field</span> <span class="sv">"name=fullName,value=Arjun Kumar"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=email,<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a5d3c4c9d0c098c4d7cfd0cbe5c0ddc4c8d5c9c08bc6cac8">[email&#160;protected]</a>"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=loanType,value=Home"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=repayment,value=Monthly"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=consent,value=Yes"</span></pre></div></div><div class="sub"><h3>Fill and flatten (static, archival-ready output)</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--fill-form</span> \
+  <span class="kw">--input</span>  <span class="sv">output/loan-application.pdf</span> \
+  <span class="kw">--output</span> <span class="sv">output/loan-final.pdf</span> \
+  <span class="kw">--field</span> <span class="sv">"name=fullName,value=Arjun Kumar"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=loanType,value=Home"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=consent,value=Yes"</span> \
+  <span class="kw">--flatten</span></pre></div><div class="cal warn"><span class="cal-i">⚠</span><div class="cal-b"><strong>--flatten invalidates digital signatures.</strong> PdfFormFiller warns if signature fields are present. Only flatten when producing a final archival or print copy.</div></div></div><div class="sub"><h3>Value format per field type</h3><div class="tw"><table><thead><tr><th>Field Type</th><th>Value to Supply</th><th>Notes</th></tr></thead><tbody><tr><td>TEXT / MULTILINE</td><td>Any string</td><td>Multi-line values may include \n</td></tr><tr><td>CHECKBOX</td><td>"Yes" / "true" / "on" / "1" → checked</td><td>Case-insensitive. Anything else → unchecked.</td></tr><tr><td>RADIO</td><td>Exact export value from options list</td><td>Must match one of the options[] values from extraction output. Invalid value → error, field is left unchanged.</td></tr><tr><td>COMBO / LISTBOX</td><td>Exact option display value</td><td>PDComboBox with isEdit()=true also accepts free-text values not in the list.</td></tr></tbody></table></div></div><div class="sub"><h3>Console output</h3><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>success</span></div><pre><span class="ok">Form filled → output/loan-filled.pdf</span>
+Fields  : 5 filled / 5 attempted  ·  Duration: 28ms</pre></div><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>with issues</span></div><pre>Form filled → output/loan-filled.pdf
+Fields  : 4 filled / 5 attempted
+<span class="er">Skipped (not found): [middleName]</span>
+<span class="er">Errors: [repayment (Invalid radio value 'Weekly'. Valid: [Monthly, Quarterly, Annual])]</span>
+<span class="er">WARNING: fill completed with issues</span></pre></div></div><div class="sub"><h3>Fill form flags</h3><div class="tw"><table><thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td>--fill-form</td><td>Yes</td><td>Activates fill mode</td></tr><tr><td>--input &lt;path&gt;</td><td>Yes</td><td>Source PDF with AcroForm (not modified)</td></tr><tr><td>--output &lt;path&gt;</td><td>Yes</td><td>Output path for the filled PDF</td></tr><tr><td>--field "name=&lt;n&gt;,value=&lt;v&gt;"</td><td>Yes (repeatable)</td><td>Field name and the value to set</td></tr><tr><td>--flatten</td><td>No</td><td>Flatten interactive fields — produces static, non-editable output</td></tr><tr><td>--password &lt;pwd&gt;</td><td>No</td><td>Password for encrypted PDFs</td></tr></tbody></table></div></div></div><div id="s11" class="sec"><div class="sec-hdr"><span class="sec-num">11</span><div class="sec-icon">↻</div><h2>AcroForm End-to-End Workflow</h2></div><p>Full lifecycle of an interactive form — from blank creation through PDF/A archival.</p><div class="steps"><div class="step"><div class="step-l"><div class="step-dot">1</div><div class="step-line"></div></div><div class="step-b"><h4>Generate a blank form</h4><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--generate-form</span> \
+  <span class="kw">--output</span> <span class="sv">output/loan-application.pdf</span> \
+  <span class="kw">--title</span>  <span class="sv">"Loan Application"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=fullName,type=text,label=Full Name,required"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=loanType,type=combo,label=Loan Type,options=Personal|Home|Auto"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=consent,type=checkbox,label=I agree to the terms"</span></pre></div></div></div><div class="step"><div class="step-l"><div class="step-dot">2</div><div class="step-line"></div></div><div class="step-b"><h4>Inspect available fields and options</h4><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract-form</span> \
+  <span class="kw">--input</span>  <span class="sv">output/loan-application.pdf</span> \
+  <span class="kw">--output</span> <span class="sv">output/loan-fields.json</span></pre></div></div></div><div class="step"><div class="step-l"><div class="step-dot">3</div><div class="step-line"></div></div><div class="step-b"><h4>Fill with applicant data (keep editable)</h4><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--fill-form</span> \
+  <span class="kw">--input</span>  <span class="sv">output/loan-application.pdf</span> \
+  <span class="kw">--output</span> <span class="sv">output/loan-filled.pdf</span> \
+  <span class="kw">--field</span> <span class="sv">"name=fullName,value=Arjun Kumar"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=loanType,value=Home"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=consent,value=Yes"</span></pre></div></div></div><div class="step"><div class="step-l"><div class="step-dot">4</div><div class="step-line"></div></div><div class="step-b"><h4>Flatten for archival copy (static, non-editable)</h4><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--fill-form</span> \
+  <span class="kw">--input</span>   <span class="sv">output/loan-filled.pdf</span> \
+  <span class="kw">--output</span>  <span class="sv">output/loan-final.pdf</span> \
+  <span class="kw">--field</span> <span class="sv">"name=fullName,value=Arjun Kumar"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=loanType,value=Home"</span> \
+  <span class="kw">--field</span> <span class="sv">"name=consent,value=Yes"</span> \
+  <span class="kw">--flatten</span></pre></div></div></div><div class="step"><div class="step-l"><div class="step-dot">5</div></div><div class="step-b"><h4>Validate flattened output for PDF/A archival</h4><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> \
+  <span class="kw">--input</span> <span class="sv">output/loan-final.pdf</span></pre></div></div></div></div></div><div id="s12" class="sec"><div class="sec-hdr"><span class="sec-num">12</span><div class="sec-icon">◈</div><h2>All Flags — Part 2 Summary</h2></div><div class="sub"><h3>Encryption flags</h3><div class="tw"><table><thead><tr><th>Mode</th><th>Key Flags</th></tr></thead><tbody><tr><td>Encrypt</td><td>--encrypt, --input, --output, --owner-password, --user-password, --permissions OR deny/allow flags</td></tr><tr><td>Decrypt</td><td>--decrypt, --input, --output, --owner-password</td></tr><tr><td>Inspect</td><td>--inspect-security, --input, --owner-password (optional — only needed when user password is set)</td></tr></tbody></table></div></div><div class="sub"><h3>Signature flags</h3><div class="tw"><table><thead><tr><th>Mode</th><th>Key Flags</th></tr></thead><tbody><tr><td>Sign</td><td>--sign, --input, --output, --keystore, --keystore-password, --reason, --location, --tsa-url, --visible, --sig-page, --sig-x, --sig-y, --sig-width, --sig-height</td></tr><tr><td>Verify</td><td>--verify, --input, --truststore</td></tr><tr><td>Export cert</td><td>--export-cert, --keystore, --keystore-password, --output</td></tr></tbody></table></div></div><div class="sub"><h3>PDF/A flags</h3><div class="tw"><table><thead><tr><th>Mode</th><th>Key Flags</th></tr></thead><tbody><tr><td>Generate</td><td>--pdfa (add to any --template-id or --batch command)</td></tr><tr><td>Validate</td><td>--validate-pdfa, --input, --output (JSON), --standard, --max-errors, --password</td></tr></tbody></table></div></div><div class="sub"><h3>AcroForm flags</h3><div class="tw"><table><thead><tr><th>Mode</th><th>Key Flags</th></tr></thead><tbody><tr><td>Generate</td><td>--generate-form, --output, --title, --config-id, --field "name=,type=,..."</td></tr><tr><td>Extract</td><td>--extract-form, --input, --output (JSON), --password</td></tr><tr><td>Fill</td><td>--fill-form, --input, --output, --field "name=,value=", --flatten, --password</td></tr></tbody></table></div></div></div><div id="s13" class="sec"><div class="sec-hdr"><span class="sec-num">13</span><div class="sec-icon">⚡</div><h2>Quick Reference — Part 2</h2></div><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash — security</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Encrypt with preset</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--encrypt</span> <span class="kw">--input</span> &lt;pdf&gt; <span class="kw">--output</span> &lt;enc.pdf&gt; <span class="kw">--owner-password</span> &lt;pwd&gt; <span class="kw">--user-password</span> &lt;pwd&gt; <span class="kw">--permissions</span> FILL_AND_PRINT
+<span class="cm"># Decrypt</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--decrypt</span> <span class="kw">--input</span> &lt;enc.pdf&gt; <span class="kw">--output</span> &lt;pdf&gt; <span class="kw">--owner-password</span> &lt;pwd&gt;
+<span class="cm"># Sign with TSA</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--sign</span> <span class="kw">--input</span> &lt;pdf&gt; <span class="kw">--output</span> &lt;signed.pdf&gt; <span class="kw">--keystore</span> &lt;p12&gt; <span class="kw">--keystore-password</span> &lt;pwd&gt; <span class="kw">--tsa-url</span> http://timestamp.digicert.com
+<span class="cm"># Verify</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--verify</span> <span class="kw">--input</span> &lt;signed.pdf&gt;</pre></div><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash — PDF/A</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Generate PDF/A-1b</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--template-id</span> &lt;id&gt; <span class="kw">--data-file</span> &lt;json&gt; <span class="kw">--output</span> &lt;pdf&gt; <span class="kw">--pdfa</span>
+<span class="cm"># Validate</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> <span class="kw">--input</span> &lt;pdf&gt;
+<span class="cm"># Validate all PDFs, write reports</span>
+for f in output/*.pdf; do <span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> <span class="kw">--input</span> <span class="sv">"$f"</span>; done
+<span class="cm"># CI: fail on non-compliance</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> <span class="kw">--input</span> out.pdf && echo <span class="ok">PASS</span> || { echo <span class="er">FAIL</span>; exit <span class="nu">1</span>; }</pre></div><div class="cb"><div class="cb-hdr"><div class="cb-dots"><span></span><span></span><span></span></div><span>bash — AcroForms</span><button class="cp" onclick="cp(this)">copy</button></div><pre><span class="cm"># Generate blank form</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--generate-form</span> <span class="kw">--output</span> &lt;pdf&gt; <span class="kw">--title</span> &lt;text&gt; <span class="kw">--field</span> <span class="sv">"name=&lt;n&gt;,type=&lt;t&gt;,label=&lt;l&gt;"</span>
+<span class="cm"># Inspect fields</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--extract-form</span> <span class="kw">--input</span> &lt;pdf&gt; [<span class="kw">--output</span> fields.json]
+<span class="cm"># Fill fields</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--fill-form</span> <span class="kw">--input</span> &lt;pdf&gt; <span class="kw">--output</span> &lt;filled.pdf&gt; <span class="kw">--field</span> <span class="sv">"name=&lt;n&gt;,value=&lt;v&gt;"</span>
+<span class="cm"># Fill + flatten for archival</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--fill-form</span> <span class="kw">--input</span> &lt;pdf&gt; <span class="kw">--output</span> &lt;final.pdf&gt; <span class="kw">--field</span> <span class="sv">"name=&lt;n&gt;,value=&lt;v&gt;"</span> <span class="kw">--flatten</span>
+<span class="cm"># Validate flattened form</span>
+<span class="fn">java -jar pdf-creator.jar</span> <span class="kw">--validate-pdfa</span> <span class="kw">--input</span> &lt;final.pdf&gt;</pre></div></div>
+</main>
+</div>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+const T=document.getElementById('themeBtn'),H=document.documentElement;
+function setTheme(t){H.setAttribute('data-theme',t);T.textContent=t==='dark'?'☀':'☾';try{localStorage.setItem('pc-theme',t)}catch(e){}}
+try{const s=localStorage.getItem('pc-theme');if(s)setTheme(s)}catch(e){}
+T.addEventListener('click',()=>setTheme(H.getAttribute('data-theme')==='dark'?'light':'dark'));
+function cp(btn){const pre=btn.closest('.cb').querySelector('pre');
+navigator.clipboard.writeText(pre.innerText).then(()=>{btn.textContent='copied!';btn.classList.add('ok');setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok')},1800)})}
+const secs=document.querySelectorAll('main [id]'),links=document.querySelectorAll('.nav-a');
+new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=document.querySelector('.nav-a[href="#'+e.target.id+'"]');if(a)a.classList.add('active')}})},{rootMargin:'-52px 0px -70% 0px'}).observe&&secs.forEach(s=>new IntersectionObserver(es=>{es.forEach(e=>{if(e.isI
