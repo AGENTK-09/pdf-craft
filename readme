@@ -1,355 +1,654 @@
-# Dark mode document
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --config-id dark --title "Dark Report" \
-  --text "This is body text on a dark background." --output dark.pdf
+# pdf-craft
 
-# Report with an embedded chart image
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --config-id report --title "Analysis" \
-  --text "See the chart below." --image ./chart.png --output analysis.pdf
+A command-line PDF toolkit built on Apache PDFBox 3. One fat JAR, zero configuration — generate, convert, manipulate, secure, sign, and inspect PDF files from the terminal or any scripting pipeline.
 
-# Multiple images
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --config-id default --title "Gallery" \
-  --images ./chart.png,./chart.png --output gallery.pdf
+---
 
-# Text from a file
-java -jar pdf-creator.jar --title "Report" \
-  --text-file ./report.txt --output report.pdf
+## Features at a glance
 
-# Inline only (as before)
-java -jar pdf-creator.jar --title "Note" \
-  --text "Hello world" --output note.pdf
+| Category | What it does |
+|---|---|
+| **Template generation** | Render PDFs from JSON data + template definitions. Tables, two-column layouts, headers, footers, metadata. |
+| **Batch generation** | Process an entire directory of JSON files or a CSV in parallel. Optional PDF/A and signing on every output. |
+| **HTML → PDF** | Convert any HTML file to PDF using wkhtmltopdf. Supports CSS, images, JavaScript, canvas, custom page sizes. |
+| **Text extraction** | Pull plain text from any PDF, with page-range filtering and position-based sorting. |
+| **Image extraction** | Export all embedded images from a PDF as PNG or JPEG. |
+| **Merge** | Combine multiple PDFs into one, with optional metadata carry-over. |
+| **Split** | Divide a PDF by page range, every-N-pages, or into N equal parts. |
+| **Encryption** | AES-256 owner/user passwords with eight granular permission flags or named presets. |
+| **Decryption** | Remove encryption with the owner password. Change passwords without re-generating. |
+| **Digital signatures** | PKCS#7/CMS detached signatures from a PKCS12 keystore. RFC 3161 TSA timestamps. Visible signature boxes. |
+| **Signature verification** | Verify all signatures in a PDF, export signer certificates. |
+| **PDF/A compliance** | Attach ISO 19005-1 (PDF/A-1b) markers to any generated output. Preflight validation with detailed error reports. |
+| **AcroForm generation** | Create interactive PDFs with text fields, checkboxes, radio buttons, combo boxes, and list boxes. |
+| **AcroForm fill** | Fill existing form fields by name, with optional flatten-to-static for archival. |
+| **AcroForm extraction** | Read field names, types, and current values as structured output. |
+| **Rasterization** | Convert PDF pages to PNG or JPEG at any DPI. |
+| **Printing** | Send a PDF to any installed printer with page range, copies, and duplex control. |
+| **Security inspection** | Inspect encryption algorithm, key length, and permission flags on any PDF. |
 
-# Both — file body + CLI appendix
-java -jar pdf-creator.jar --title "Report" \
-  --text-file ./report.txt \
-  --text "Appendix: approved by Jane." \
-  --output report.pdf
+---
+
+## Requirements
+
+- Java 17 or later
+- Maven 3.8+ (to build from source)
+- wkhtmltopdf 0.12.x — only required for `--html-to-pdf` mode
+
+---
+
+## Build
+
+```bash
+git clone https://github.com/your-org/pdf-craft.git
+cd pdf-craft
+mvn package -q
+# → target/pdf-creator-1.0-SNAPSHOT.jar  (fat JAR, ~15 MB)
 ```
 
-The console output will now also tell you where the text came from:
+The Maven Shade plugin bundles all dependencies into a single executable JAR. No separate classpath setup needed.
+
+---
+
+## Quick start
+
+```bash
+alias pdf="java -jar target/pdf-creator-1.0-SNAPSHOT.jar"
+
+# Convert HTML to PDF
+pdf --html-to-pdf --input report.html --output report.pdf
+
+# Merge two PDFs
+pdf --merge --inputs part1.pdf,part2.pdf --output combined.pdf
+
+# Encrypt with AES-256, read-only for users
+pdf --encrypt --input doc.pdf --output doc-secure.pdf \
+    --owner-password admin123 --user-password view456 --preset read-only
+
+# Sign with a PKCS12 keystore
+pdf --sign --input doc.pdf --output doc-signed.pdf \
+    --keystore my.p12 --keystore-password secret \
+    --reason "Approved" --tsa-url http://timestamp.digicert.com
 ```
-Using config  : report
-Output file   : report.pdf
-Text source   : file (./report.txt) + inline --text
 
-# Single page test
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
-  --config-id default \
-  --title "Status Update" \
-  --author "Jane Doe" \
-  --text-file test-single-page.txt \
-  --output out-single.pdf
+---
 
-# Multi page test
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
-  --config-id report \
-  --title "Annual Technology Review" \
-  --author "Engineering Team" \
-  --text-file test-multi-page.txt \
-  --output out-multi.pdf
+## Usage reference
 
-# Try the compact preset — smaller font means more fits per page
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
-  --config-id compact \
-  --title "Annual Technology Review" \
-  --text-file test-multi-page.txt \
-  --output out-compact.pdf
+### Template generation
 
+Render a single PDF from a JSON data file and a template definition.
 
-  # Put your logo at assets/logo.png first, then:
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
-  --template-id branded-invoice \
-  --data-file data/branded-invoice-acme.json \
-  --output branded-invoice.pdf
+```bash
+java -jar pdf-creator.jar \
+  --template-id  bank-statement \
+  --data-file    data/CUST-001.json \
+  --output       output/statement.pdf
+```
 
-# Single bank statement
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
+**With custom template and config files:**
+
+```bash
+java -jar pdf-creator.jar \
+  --template-id   bank-statement \
+  --template-file my-templates.json \
+  --config-file   my-configs.json \
+  --data-file     data/CUST-001.json \
+  --output        output/statement.pdf
+```
+
+**With PDF/A-1b compliance:**
+
+```bash
+java -jar pdf-creator.jar \
   --template-id bank-statement \
-  --data-file data/statements/CUST-001.json \
-  --output output/CUST-001-feb26.pdf
+  --data-file   data/CUST-001.json \
+  --output      output/statement.pdf \
+  --pdfa
+```
 
-# Batch — all statements in the directory, 8 threads
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --batch \
-  --template-id bank-statement \
-  --data-dir data/statements/ \
-  --output-dir output/statements/ \
-  --threads 8
+---
 
-# Credit card statement (different template, same data shape)
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
-  --template-id credit-card-statement \
-  --data-file data/cards/CARD-001.json \
-  --output output/CARD-001-feb26.pdf
+### Batch generation — JSON directory
 
-# Incorporating Metadata 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
-  --title    "Q1 2026 Meeting Notes" \
-  --author   "Jane Smith" \
-  --subject  "Quarterly planning meeting summary" \
-  --keywords "meeting notes Q1 2026 planning budget" \
-  --creator  "Internal Planning Tool" \
-  --text     "Key decisions: approved Q1 budget..." \
-  --output   notes.pdf
+One PDF per `.json` file in the data directory, using 8 parallel threads:
 
-# All text to stdout
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input report.pdf
+```bash
+java -jar pdf-creator.jar \
+  --batch \
+  --template-id  bank-statement \
+  --data-dir     data/statements/ \
+  --output-dir   output/statements/ \
+  --threads      8
+```
 
-# Pages 1-2, saved to file
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input out-single.pdf \
-  --output report.txt --start-page 1 --end-page 2
+**Batch + PDF/A + sign in one pass:**
 
-# Normalised, no metadata header, flat output
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input out-single.pdf \
-  --strip-whitespace --no-metadata --no-per-page
+```bash
+java -jar pdf-creator.jar \
+  --batch \
+  --template-id       bank-statement \
+  --data-dir          data/statements/ \
+  --output-dir        output/signed/ \
+  --threads           4 \
+  --pdfa \
+  --keystore          certs/bank.p12 \
+  --keystore-password secret \
+  --reason            "Monthly Account Statement" \
+  --tsa-url           http://timestamp.digicert.com
+```
 
-# Normalised, no metadata header, flat output, saved to file
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input out-compact.pdf \
-  --strip-whitespace --no-metadata --no-per-page --output report-compact.txt
+---
 
-# All images to extracted-images/ (default dir)
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract-images --input statement.pdf
+### Batch generation — CSV
 
-# JPEG, min 100x100, pages 1-3 only, custom output dir
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract-images \
-  --input gallery.pdf --output-dir output/images/ \
-  --img-format jpg --min-width 100 --min-height 100 \
-  --start-page 1 --end-page 3
+One PDF per data row. The CSV must have a header row.
 
-# Extract text from a password-protected PDF
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract \
-  --input input/protected.pdf --password admin1234
+```bash
+java -jar pdf-creator.jar \
+  --batch \
+  --template-id  notification-letter \
+  --csv-file     data/customers.csv \
+  --output-dir   output/letters/ \
+  --threads      4
+```
 
-# Extract images from a password-protected PDF
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract-images \
-  --input inputs/protected_2.pdf --password admin1234 \
-  --output-dir images/
+**CSV column configuration:**
 
-# Merge
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --merge \
-  --inputs inputs/jan.pdf,inputs/feb.pdf,inputs/march.pdf --output output/q1.pdf
+```bash
+java -jar pdf-creator.jar \
+  --batch \
+  --template-id  notification-letter \
+  --csv-file     data/customers.csv \
+  --output-dir   output/letters/ \
+  --ref-col      customer_id \
+  --out-col      output_filename
+```
 
-# Merge with a password-protected input (empty string = no password)
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --merge \
-  --inputs inputs/jan.pdf,inputs/protected.pdf --passwords ,admin1234 --output output/merged.pdf
+---
+
+### HTML → PDF
+
+Requires wkhtmltopdf installed ([wkhtmltopdf.org](https://wkhtmltopdf.org/downloads.html)).
+
+**Basic conversion:**
+
+```bash
+java -jar pdf-creator.jar --html-to-pdf \
+  --input  invoice.html \
+  --output invoice.pdf
+```
+
+**Full options — Letter landscape with print CSS and metadata:**
+
+```bash
+java -jar pdf-creator.jar --html-to-pdf \
+  --input             report.html \
+  --output            report.pdf \
+  --page-size         Letter \
+  --orientation       Landscape \
+  --margin-top        15 \
+  --margin-bottom     15 \
+  --margin-left       20 \
+  --margin-right      20 \
+  --print-media-type \
+  --title             "Q4 2025 Report" \
+  --author            "Finance Team" \
+  --subject           "Quarterly Business Review"
+```
+
+**JavaScript-rendered content (e.g. chart.js graphs):**
+
+```bash
+java -jar pdf-creator.jar --html-to-pdf \
+  --input            dashboard.html \
+  --output           dashboard.pdf \
+  --javascript \
+  --javascript-delay 2000
+```
+
+**Configure wkhtmltopdf path on Windows (instead of environment variable):**
+
+Create `pdf-creator.properties` next to the JAR:
+
+```properties
+wkhtmltopdf.path = C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe
+```
+
+Or pass it explicitly:
+
+```bash
+java -jar pdf-creator.jar --html-to-pdf \
+  --input       invoice.html \
+  --output      invoice.pdf \
+  --tool-config C:/myapp/pdf-creator.properties
+```
+
+---
+
+### Text extraction
+
+```bash
+# Extract all text to stdout
+java -jar pdf-creator.jar --extract --input document.pdf
+
+# Extract pages 2–5, write to file
+java -jar pdf-creator.jar --extract \
+  --input      document.pdf \
+  --output     extracted.txt \
+  --start-page 2 \
+  --end-page   5
+
+# Password-protected PDF
+java -jar pdf-creator.jar --extract \
+  --input    encrypted.pdf \
+  --password userpassword
+```
+
+---
+
+### Image extraction
+
+```bash
+# Extract all images as PNG
+java -jar pdf-creator.jar --extract-images \
+  --input      document.pdf \
+  --output-dir extracted-images/
+
+# Extract as JPEG, skip tiny images, page range
+java -jar pdf-creator.jar --extract-images \
+  --input      document.pdf \
+  --output-dir images/ \
+  --img-format jpg \
+  --min-width  100 \
+  --min-height 100 \
+  --start-page 1 \
+  --end-page   10
+```
+
+---
+
+### Merge
+
+```bash
+# Merge two PDFs
+java -jar pdf-creator.jar --merge \
+  --inputs  part1.pdf,part2.pdf \
+  --output  combined.pdf
+
+# Merge three PDFs, one password-protected
+java -jar pdf-creator.jar --merge \
+  --inputs    public.pdf,secure.pdf,appendix.pdf \
+  --passwords ,ownerpass, \
+  --output    full-report.pdf
+```
+
+---
+
+### Split
+
+```bash
+# Split by explicit page ranges
+java -jar pdf-creator.jar --split \
+  --input       report.pdf \
+  --page-ranges "1-3,4-8,9-12" \
+  --output-dir  split/
 
 # Split every 5 pages
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --split \
-  --input report.pdf --every-n-pages 5 --output-dir split/
+java -jar pdf-creator.jar --split \
+  --input          large.pdf \
+  --every-n-pages  5 \
+  --output-dir     chunks/
 
-# Split into 4 equal parts
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --split \
-  --input report.pdf --into-parts 4 --output-dir split/
+# Divide into 4 equal parts
+java -jar pdf-creator.jar --split \
+  --input       book.pdf \
+  --into-parts  4 \
+  --output-dir  parts/
+```
 
-# Split at explicit boundaries
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --split \
-  --input report.pdf --page-ranges "1-3,4-6,7-10" --output-dir split/
+---
 
-# Discover printers
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --list-printers
+### Encryption (AES-256)
 
-# Print to default printer (shows dialog)
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --print --input report.pdf
+```bash
+# Using a permission preset
+java -jar pdf-creator.jar --encrypt \
+  --input          document.pdf \
+  --output         document-secure.pdf \
+  --owner-password admin123 \
+  --user-password  view456 \
+  --preset         read-only
 
-# Silent batch print to a named printer
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --print --input report.pdf \
-  --printer "HP LaserJet 400" --silent \
-  --copies 2 --sides duplex-long --scaling shrink
+# Available presets: all-allowed | read-only | print-only | no-copy
 
-# Print pages 2–5 of a protected PDF
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --print --input protected.pdf \
-  --password secret --start-page 2 --end-page 5 --silent
+# Using granular permission flags
+java -jar pdf-creator.jar --encrypt \
+  --input          document.pdf \
+  --output         document-secure.pdf \
+  --owner-password admin123 \
+  --deny-copy \
+  --deny-modify \
+  --deny-annotations
+```
 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --encrypt \
-    --input output/hello.pdf \
-    --output test-encrypted.pdf \
-    --owner-password "ownerSecret" \
-    --user-password "userSecret"
+---
 
-# Expected: Error: PDF is password-protected and no password was supplied
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input output/test-encrypted.pdf
+### Decryption and password management
 
-# Encrypt with read-only preset (opens freely, no copy/modify)
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --encrypt \
-    --input output/hello.pdf \
-    --output test-readonly.pdf \
-    --owner-password "ownerSecret" \
-    --user-password "" \
-    --preset read-only
+```bash
+# Decrypt (remove all security)
+java -jar pdf-creator.jar --decrypt \
+  --input          secure.pdf \
+  --output         plain.pdf \
+  --owner-password admin123
 
-# Verify it opens without any password:
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input test-readonly.pdf
+# Change password
+java -jar pdf-creator.jar --change-password \
+  --input              secure.pdf \
+  --output             re-encrypted.pdf \
+  --owner-password     oldpassword \
+  --new-owner-password newpassword \
+  --new-user-password  newuserpass
 
-# Encrypt with custom deny flags
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --encrypt \
-    --input output/hello.pdf \
-    --output output/test-printonly.pdf \
-    --owner-password "ownerSecret" \
-    --deny-copy \
-    --deny-modify \
-    --deny-annotations \
-    --deny-fill-forms \
-    --deny-accessibility \
-    --deny-assemble
+# Inspect security settings (no password needed for permission-only encrypted PDFs)
+java -jar pdf-creator.jar --inspect-security --input document.pdf
 
-# Inspect security status
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --inspect-security --input output/hello.pdf
-# Expected: Encrypted: NO
+# Inspect when user password is set
+java -jar pdf-creator.jar --inspect-security \
+  --input          document.pdf \
+  --owner-password admin123
+```
 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --inspect-security \
-    --input output/test-printonly.pdf \
-    --owner-password "ownerSecret" \
+---
 
-# Update permissions on an existing encrypted PDF
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --update-permissions \
-    --input output/test-encrypted.pdf \
-    --output output/test-updated-perms.pdf \
-    --owner-password "ownerSecret" \
-    --preset print-only
+### Digital signatures
 
-# Inspect the Permissions 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --inspect-security \
-    --input output/test-updated-perms.pdf \
-    --owner-password "ownerSecret"
-# Expected: Print: allowed, Accessibility: DENIED, Copy: DENIED
+**Sign with visible signature box and TSA timestamp:**
 
-# Change Password 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --change-password \
-    --input output/test-encrypted.pdf \
-    --output output/test-newpwd.pdf \
-    --owner-password "ownerSecret" \
-    --new-owner-password "newOwner99" \
-    --new-user-password "newUser99"
+```bash
+java -jar pdf-creator.jar --sign \
+  --input            document.pdf \
+  --output           document-signed.pdf \
+  --keystore         my-cert.p12 \
+  --keystore-password secret \
+  --reason           "Approved by Finance" \
+  --location         "London, UK" \
+  --tsa-url          http://timestamp.digicert.com \
+  --visible \
+  --sig-page         1 \
+  --sig-x            50 \
+  --sig-y            50 \
+  --sig-width        200 \
+  --sig-height       60
+```
 
-# Check if old password is rejected or not 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input output/test-newpwd.pdf --password "userSecret"
-# Expected: Error: Incorrect password for PDF
+**Verify all signatures in a PDF:**
 
-# Decrypt Pdf
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --decrypt \
-    --input output/test-encrypted.pdf \
-    --output output/test-decrypted.pdf \
-    --owner-password "ownerSecret"
+```bash
+java -jar pdf-creator.jar --verify --input document-signed.pdf
+```
 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --inspect-security --input output/test-decrypted.pdf
-# Expected: Encrypted: NO
+**Export signer certificate:**
 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract --input output/test-decrypted.pdf
-# Expected: text extracted with no password needed
+```bash
+java -jar pdf-creator.jar --export-cert \
+  --input  document-signed.pdf \
+  --output signer.crt
+```
 
-# Generate a test keystore (one time):
-keytool -genkeypair \
-  -storepass changeit -storetype PKCS12 -alias myorg \
-  -validity 365 -keyalg RSA -keysize 2048 \
-  -dname "CN=MyOrg Statements, O=MyOrg, L=Chennai, ST=TN, C=IN" \
-  -keystore myorg.p12
+---
 
-# Sign a Statement 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --sign \
-  --input output/out-single.pdf --output output/statement-signed.pdf \
-  --keystore myorg.p12 --keystore-password changeit \
-  --reason "Monthly Account Statement" --location "Chennai, India"
+### PDF/A validation
 
-# Verify the Signature 
-# With custom trust anchor (self-signed cert)
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --verify \
-  --input output/statement-signed.pdf --truststore myorg-public.cer
+```bash
+# Validate against PDF/A-1b
+java -jar pdf-creator.jar --validate-pdfa --input document.pdf
 
-# With JVM default trust (for commercially issued certs — no truststore needed)
-java -jar pdf-creator.jar --verify --input statement-signed.pdf
+# Validate and write detailed JSON report
+java -jar pdf-creator.jar --validate-pdfa \
+  --input       document.pdf \
+  --output      validation-report.json \
+  --standard    PDF_A_1B
+```
 
-# Export public cert to share with recipients:
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --export-cert \
-  --keystore myorg.p12 --keystore-password changeit --output myorg-public.cer
+Exit codes: `0` = valid, `1` = invalid (see report for issues), `2` = error.
 
-# Batch generate + sign customer statements in one pass:
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --batch \
-  --template-id bank-statement \
-  --csv-file customers.csv \
-  --output-dir statements/ \
-  --threads 8 \
-  --keystore myorg.p12 --keystore-password changeit \
-  --reason "Monthly Account Statement - March 2026" \
-  --tsa-url http://timestamp.digicert.com
+---
 
-# All pages → PNG at 150 DPI (default)
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --rasterize \
-    --input statement.pdf \
-    --output-dir statement-pages/
+### AcroForm — generate interactive PDF
 
-# Print quality PNG at 300 DPI
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --rasterize \
-    --input statement.pdf \
-    --output-dir statement-pages/ \
-    --dpi 300
+*Note: This does not work properly*
 
-# Pages 1-3 → JPEG at 200 DPI, 90% quality
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --rasterize \
-    --input output/out-compact.pdf \
-    --output-dir output/previews/ \
-    --format jpeg --dpi 200 --jpeg-quality 0.90 \
-    --start-page 1 --end-page 3
-
-# First page only as a thumbnail
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --rasterize \
-    --input output/out-multi.pdf \
-    --output-dir output/thumbnails/ \
-    --dpi 72 --start-page 1 --end-page 1 \
-    --file-prefix thumb
-
-# PDFA Related Usage 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
-  --template-id bank-statement \
-  --data-file data/statements/CUST-001.json \
-  --output output/statement-001.pdf \
-  --pdfa
-
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar \
-  --validate \
-  --input output/statement-002.pdf
-
-# Create a pdf with interactive acroform fields 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --generate-form \
-  --output output/loan-application.pdf \
-  --title "Loan Application Form" \
-  --config-id "default" \
-  --field "name=fullName,type=text,label=Full Name,required,tooltip=Enter your legal name" \
-  --field "name=email,type=text,label=Email Address,required" \
-  --field "name=address,type=multiline,label=Residential Address,rows=3" \
-  --field "name=loanType,type=combo,label=Loan Type,options=Personal|Home|Auto|Education,default=Personal" \
-  --field "name=repayment,type=radio,label=Repayment Frequency,options=Monthly|Quarterly|Annual" \
-  --field "name=branch,type=listbox,label=Preferred Branch,options=Chennai|Mumbai|Delhi|Bangalore" \
-  --field "name=consent,type=checkbox,label=I agree to the terms and conditions,default=Yes" \
-  --field "name=notes,type=multiline,label=Additional Notes,rows=4,readonly"
-
-# Extracting from the form 
-java -jar target/pdf-creator-1.0-SNAPSHOT.jar --extract-form \
-  --input output/loan-application.pdf
-
-# Step 1 — generate a blank form
+```bash
 java -jar pdf-creator.jar --generate-form \
-  --output output/loan-application.pdf \
-  --title "Loan Application" \
-  --field "name=fullName,type=text,label=Full Name,required" \
-  --field "name=loanType,type=combo,label=Loan Type,options=Personal|Home|Auto" \
-  --field "name=consent,type=checkbox,label=I agree to the terms"
+  --form-def  forms/application-form.json \
+  --output    output/application-form.pdf
+```
 
-# Step 2 — inspect what fields are available
-java -jar pdf-creator.jar --extract-form \
-  --input output/loan-application.pdf \
-  --output output/loan-fields.json
+---
 
-# Step 3 — fill it with applicant data
+### AcroForm — fill and flatten
+
+*Note: This does not work properly*
+
+```bash
+# Fill fields interactively
 java -jar pdf-creator.jar --fill-form \
-  --input output/loan-application.pdf \
-  --output output/loan-filled.pdf \
-  --field "name=fullName,value=Arjun Kumar" \
-  --field "name=loanType,value=Home" \
-  --field "name=consent,value=Yes"
+  --input     forms/application-form.pdf \
+  --fill-data data/applicant.json \
+  --output    output/filled-form.pdf
 
-# Step 4 — flatten for final archival copy
+# Fill and flatten (fields become static — for archival)
 java -jar pdf-creator.jar --fill-form \
-  --input output/loan-filled.pdf \
-  --output output/loan-final.pdf \
-  --field "name=fullName,value=Arjun Kumar" \
-  --field "name=loanType,value=Home" \
-  --field "name=consent,value=Yes" \
+  --input     forms/application-form.pdf \
+  --fill-data data/applicant.json \
+  --output    output/archived-form.pdf \
   --flatten
+```
+
+---
+
+### AcroForm — extract field values
+
+*Note: This does not work properly*
+
+```bash
+java -jar pdf-creator.jar --extract-form \
+  --input  forms/filled-form.pdf \
+  --output extracted-fields.json
+```
+
+---
+
+### Rasterization
+
+Convert PDF pages to images:
+
+```bash
+# All pages as PNG at 150 DPI
+java -jar pdf-creator.jar --rasterize \
+  --input      document.pdf \
+  --output-dir page-images/
+
+# Pages 1–3 as JPEG at 300 DPI
+java -jar pdf-creator.jar --rasterize \
+  --input      document.pdf \
+  --output-dir images/ \
+  --format     jpg \
+  --dpi        300 \
+  --start-page 1 \
+  --end-page   3
+```
+
+---
+
+### Printing
+
+```bash
+# Print to default printer
+java -jar pdf-creator.jar --print --input document.pdf
+
+# Print specific pages to a named printer
+java -jar pdf-creator.jar --print \
+  --input      document.pdf \
+  --printer    "Office HP LaserJet" \
+  --start-page 1 \
+  --end-page   5 \
+  --copies     2
+
+# List available printers
+java -jar pdf-creator.jar --list-printers
+```
+
+---
+
+## Chaining operations
+
+The output of any mode is a standard PDF, so operations chain naturally:
+
+```bash
+# HTML → PDF → encrypt → sign
+java -jar pdf-creator.jar --html-to-pdf \
+    --input invoice.html --output invoice.pdf
+
+java -jar pdf-creator.jar --encrypt \
+    --input invoice.pdf --output invoice-enc.pdf \
+    --owner-password admin --preset read-only
+
+java -jar pdf-creator.jar --sign \
+    --input invoice-enc.pdf --output invoice-final.pdf \
+    --keystore my.p12 --keystore-password secret
+```
+
+---
+
+## Template format
+
+Templates are defined in `templates/pdf-templates.json`:
+
+```json
+[
+  {
+    "id": "bank-statement",
+    "title": "Account Statement",
+    "sections": [
+      { "type": "summary", "fields": ["accountName", "accountNumber", "period"] },
+      { "type": "table",   "dataKey": "transactions",
+        "columns": ["date", "description", "debit", "credit", "balance"] }
+    ],
+    "footer": { "text": "{{bankName}} · {{sortCode}}", "pageNumbers": true }
+  }
+]
+```
+
+Data files use `{{placeholder}}` syntax for scalar values and arrays for table rows. See `data/statements/CUST-001.json` for a complete example.
+
+---
+
+## Configuration presets
+
+Config presets in `configs/pdf-configs.json` define page size, fonts, margins, and colours:
+
+```json
+[
+  {
+    "id":        "default",
+    "pageSize":  "A4",
+    "font":      "Helvetica",
+    "fontSize":  10,
+    "margins":   { "top": 40, "bottom": 40, "left": 50, "right": 50 },
+    "headerBg":  "#1B3A6B",
+    "headerFg":  "#FFFFFF"
+  }
+]
+```
+
+Pass a different config at runtime with `--config-id` or `--config-file`.
+
+---
+
+## Dependencies
+
+| Library | Version | Purpose |
+|---|---|---|
+| Apache PDFBox | 3.0.2 | Core PDF read/write engine |
+| PDFBox Preflight | 3.0.2 | PDF/A-1 validation |
+| PDFBox XMPBox | 3.0.2 | XMP metadata for PDF/A |
+| BouncyCastle Provider | 1.78.1 | AES-256 encryption |
+| BouncyCastle PKIX | 1.78.1 | CMS signatures, certificate handling |
+| BouncyCastle Util | 1.78.1 | TSA timestamp embedding |
+| JAXB API | 2.3.1 | XML/XMP support on Java 17+ |
+| wkhtmltopdf | 0.12.x | HTML rendering (external binary, `--html-to-pdf` only) |
+
+All Java dependencies are bundled into the fat JAR by Maven Shade. No classpath configuration required.
+
+---
+
+## Project structure
+
+```
+pdf-craft/
+├── src/main/java/com/pdfcreator/
+│   ├── PdfCreator.java              Main entry point — CLI routing
+│   ├── batch/                       Batch job orchestration
+│   ├── extractor/                   Text and image extraction
+│   ├── forms/                       AcroForm generation, filling, extraction
+│   ├── generator/                   Core PDF page generation
+│   ├── htmlconverter/               HTML-to-PDF via wkhtmltopdf
+│   ├── manipulator/                 Merge and split
+│   ├── pdfa/                        PDF/A compliance attachment
+│   ├── pipeline/                    Template render pipeline
+│   ├── printer/                     Java Printing API integration
+│   ├── rasterizer/                  Page-to-image rendering
+│   ├── renderer/                    Section renderers (table, summary, columns)
+│   ├── security/                    Encryption, decryption, permissions
+│   ├── signature/                   Digital signatures and verification
+│   ├── template/                    Template loading and placeholder resolution
+│   └── validator/                   PDF/A preflight validation
+├── src/test/java/com/pdfcreator/
+│   └── PdfCreatorTest.java          62 integration test scenarios
+├── templates/
+│   └── pdf-templates.json           Sample template definitions
+├── configs/
+│   └── pdf-configs.json             Sample config presets
+├── data/
+│   └── statements/                  Sample JSON data files
+├── pdf-creator.properties           wkhtmltopdf path config (Windows / custom installs)
+└── pom.xml
+```
+
+---
+
+## Running the tests
+
+```bash
+mvn test
+```
+
+The test suite (`PdfCreatorTest.java`) covers 62 scenarios across all modes: template generation, batch processing, text/image extraction, merge/split, encryption, signing, PDF/A validation, AcroForm operations, rasterization, and HTML-to-PDF conversion.
+
+---
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE) for details.
+
+---
+
+## Contributing
+
+Pull requests are welcome. For large changes, open an issue first to discuss the approach.
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Build and run tests: `mvn package && mvn test`
+4. Submit a pull request against `main`
+
+---
+
+## Development notes
+
+This project was developed with AI assistance ([Claude](https://claude.ai) by Anthropic). All code has been reviewed, tested, debugged, and is maintained by the author. The architecture decisions, feature design, bug investigations, and overall direction are human-driven — Claude was used as a development tool, in the same way one might use an IDE, a Stack Overflow answer, or a pairing partner.
+
+If you're contributing: the codebase is consistent and intentional throughout. If something looks unusual or you have questions about a design decision, open an issue — there's a person behind it who can explain the reasoning.
