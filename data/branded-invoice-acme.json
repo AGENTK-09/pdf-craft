@@ -1,0 +1,13 @@
+{
+  "company_name":   "Acme Engineering Ltd",
+  "invoice_no":     "0042",
+  "logo_path":      "assets/logo.png",
+  "brand_color":    "#003366",
+  "client_name":    "Globex Corporation",
+  "client_address": "123 Industrial Park, Springfield, SP1 2AB",
+  "issue_date":     "23 February 2026",
+  "due_date":       "25 March 2026",
+  "line_items":     "Consulting Services (3 days @ £800/day)  £2,400.00\nTravel and Expenses                        £210.00\nTechnical Report Preparation               £600.00",
+  "total_amount":   "£3,210.00",
+  "payment_terms":  "Payment is due within 30 days. Reference invoice #0042 with your payment."
+}

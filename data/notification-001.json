@@ -1,0 +1,13 @@
+{
+  "bank_name":          "First National Bank plc",
+  "bank_address":       "1 Finance Square, London, EC2V 8RP",
+  "customer_name":      "Jane Smith",
+  "customer_address":   "42 Maple Avenue, Bristol, BS1 4RN",
+  "date":               "23 February 2026",
+  "subject":            "Important Changes to Your Account Terms",
+  "salutation":         "Ms Smith",
+  "body":               "We are writing to inform you of changes to the terms and conditions that apply to your current account, effective from 1 April 2026.\n\nThe key changes are as follows. The monthly fee for accounts with a balance below £500 will increase from £5.00 to £6.50. Overseas transaction fees will be reduced from 2.99% to 2.75% of the transaction value. The interest rate on arranged overdrafts will change from 39.9% EAR to 39.9% EAR (no change).\n\nYou do not need to take any action. If you do not wish to continue under the new terms, you have the right to close or switch your account free of charge before the effective date. Full details of all changes are available on our website and in branch.",
+  "regulatory_notice":  "First National Bank plc is authorised by the Prudential Regulation Authority and regulated by the Financial Conduct Authority and the Prudential Regulation Authority. Registered in England and Wales No. 1234567. Registered office: 1 Finance Square, London, EC2V 8RP.",
+  "signatory":          "Sarah Johnson",
+  "signatory_title":    "Head of Customer Relations"
+}

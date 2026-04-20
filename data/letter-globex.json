@@ -1,0 +1,12 @@
+{
+  "sender_name":       "Jane Doe",
+  "sender_address":    "Acme Engineering Ltd, 10 Tech Street, London, EC1A 1BB",
+  "date":              "23 February 2026",
+  "recipient_name":    "Mr John Smith",
+  "recipient_address": "Globex Corporation, 123 Industrial Park, Springfield, SP1 2AB",
+  "subject":           "Re: Project Proposal — Platform Modernisation",
+  "salutation":        "Mr Smith",
+  "body":              "Thank you for meeting with us last week to discuss the platform modernisation initiative. We were pleased to learn more about Globex's infrastructure goals and believe our team is well placed to support you through this programme.\n\nFollowing our conversation, we have prepared a detailed proposal covering the three phases of work discussed: the initial assessment, the migration planning exercise, and the implementation support engagement. You will find the proposal attached to this letter.\n\nOur proposed timeline places the initial assessment in March 2026, with migration planning running through April and May. We are confident this schedule aligns with your stated deadline of end of Q2 2026.\n\nWe would welcome the opportunity to walk you through the proposal at your convenience. Please do not hesitate to contact me directly to arrange a suitable time.",
+  "closing":           "Yours sincerely",
+  "sender_name":       "Jane Doe"
+}

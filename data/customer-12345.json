@@ -1,0 +1,29 @@
+{
+  "customer_name":   "Jane Smith",
+  "account_no":      "87654321",
+  "sort_code":       "12-34-56",
+  "period_from":     "01 January 2026",
+  "period_to":       "31 January 2026",
+  "opening_balance": "£4,210.00",
+  "total_credits":   "£3,450.00",
+  "total_debits":    "£1,823.45",
+  "closing_balance": "£5,836.55",
+  "transactions": [
+    { "date": "01 Jan", "description": "Opening Balance",               "debit": "",         "credit": "",          "balance": "4,210.00" },
+    { "date": "03 Jan", "description": "TESCO STORES 3456 LONDON",      "debit": "42.30",    "credit": "",          "balance": "4,167.70" },
+    { "date": "05 Jan", "description": "SALARY - GLOBEX CORP LTD",      "debit": "",         "credit": "3,200.00",  "balance": "7,367.70" },
+    { "date": "07 Jan", "description": "AMAZON PAYMENTS",               "debit": "89.99",    "credit": "",          "balance": "7,277.71" },
+    { "date": "08 Jan", "description": "NETFLIX.COM",                   "debit": "15.99",    "credit": "",          "balance": "7,261.72" },
+    { "date": "10 Jan", "description": "MORTGAGE DIRECT DEBIT",         "debit": "1,100.00", "credit": "",          "balance": "6,161.72" },
+    { "date": "12 Jan", "description": "SAINSBURYS SUPERSTORE",         "debit": "67.43",    "credit": "",          "balance": "6,094.29" },
+    { "date": "14 Jan", "description": "COUNCIL TAX - DIRECT DEBIT",    "debit": "189.00",   "credit": "",          "balance": "5,905.29" },
+    { "date": "15 Jan", "description": "FREELANCE PAYMENT RECEIVED",    "debit": "",         "credit": "250.00",    "balance": "6,155.29" },
+    { "date": "17 Jan", "description": "BRITISH GAS DIRECT DEBIT",      "debit": "94.50",    "credit": "",          "balance": "6,060.79" },
+    { "date": "19 Jan", "description": "COFFEE SHOP - CONTACTLESS",     "debit": "4.80",     "credit": "",          "balance": "6,055.99" },
+    { "date": "20 Jan", "description": "WATERSTONES PICCADILLY",        "debit": "22.99",    "credit": "",          "balance": "6,032.00" },
+    { "date": "22 Jan", "description": "INTEREST CREDITED",             "debit": "",         "credit": "0.55",      "balance": "6,032.55" },
+    { "date": "25 Jan", "description": "VODAFONE MONTHLY PLAN",         "debit": "35.00",    "credit": "",          "balance": "5,997.55" },
+    { "date": "28 Jan", "description": "TRANSFER TO SAVINGS",           "debit": "161.00",   "credit": "",          "balance": "5,836.55" },
+    { "date": "31 Jan", "description": "Closing Balance",               "debit": "",         "credit": "",          "balance": "5,836.55" }
+  ]
+}

@@ -13,6 +13,7 @@ import com.pdfcreator.manipulator.PdfManipulatorCli;
 import com.pdfcreator.printer.PdfPrinterCli;
 import com.pdfcreator.security.PdfSecurityCli;
 import com.pdfcreator.signature.PdfSignatureCli;
+import com.pdfcreator.htmlconverter.HtmlConverterCli;
 import com.pdfcreator.rasterizer.PdfRasterizerCli;
 import com.pdfcreator.validator.PdfValidatorCli;
 import com.pdfcreator.template.DocumentMetadata;
@@ -121,6 +122,12 @@ public class PdfCreator {
             return;
         }
 
+        if (hasFlag(args, "--html-to-pdf")) {
+            // ---- HTML-TO-PDF MODE ----
+            new HtmlConverterCli().run(args);
+            return;
+        }
+
         if (hasFlag(args, "--batch")) {
             // ---- BATCH MODE ----
             if (templateId == null) {
@@ -188,7 +195,7 @@ public class PdfCreator {
                         .visible(bsVisible)
                         .signaturePage(bsSigPage)
                         .signatureRect(bsSigX, bsSigY, bsSigW, bsSigH)
-                        .buildTemplate();
+                        .buildTemplate();  // skips inputPath/outputPath validation
                 runner.withSigning(signingTemplate);
                 System.out.printf("Signing        : enabled (keystore: %s, alias: %s)%n",
                     bsKeystore, bsAlias != null ? bsAlias : "auto");
@@ -452,6 +459,29 @@ public class PdfCreator {
             SHARED OPTIONS:
               --template-file <path>   Template definitions (default: templates/pdf-templates.json)
               --config-file <path>     Config presets (default: configs/pdf-configs.json)
+
+            HTML-TO-PDF MODE:
+              --html-to-pdf
+              --input <path>           Source HTML file (required)
+              --output <path>          Output PDF file (required)
+              --page-size <size>       A4 (default) | A3 | A5 | Letter | Legal | Tabloid
+              --orientation <o>        Portrait (default) | Landscape
+              --margin-top <mm>        Top margin in mm (default: 10)
+              --margin-bottom <mm>     Bottom margin in mm (default: 10)
+              --margin-left <mm>       Left margin in mm (default: 10)
+              --margin-right <mm>      Right margin in mm (default: 10)
+              --zoom <factor>          Zoom factor, e.g. 0.8 or 1.25 (default: 1.0)
+              --javascript             Enable JavaScript execution (default: off)
+              --javascript-delay <ms>  Wait N ms after page load before capture (default: 0)
+              --print-media-type       Use @media print CSS rules (default: @media screen)
+              --user-style-sheet <p>   Inject extra CSS file on top of page styles
+              --no-images              Suppress image loading and embedding
+              --title <text>           Override PDF title (default: from <title> tag)
+              --author <text>          PDF author metadata
+              --subject <text>         PDF subject metadata
+
+              Requires: wkhtmltopdf on PATH, or WKHTMLTOPDF_PATH env var set.
+              Install: apt-get install wkhtmltopdf  |  brew install wkhtmltopdf
 
             EXAMPLES:
               # Extract all text from a PDF to stdout
